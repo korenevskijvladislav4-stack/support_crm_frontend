@@ -43,10 +43,10 @@ export interface IUser{
 }
 
 export interface IUserFilters{
-    full_name: string|null;
-    group: number[]|[];
-    team: number[]|[];
-    roles: number[]|[];
+    full_name?: string|null;
+    group?: number[]|[];
+    team?: number[]|[];
+    roles?: number[]|[];
     schedule_type?: string|null;
     phone?: string|null;
     email?: string|null;

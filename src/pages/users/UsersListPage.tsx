@@ -125,9 +125,9 @@ const UsersListPage: FC = () => {
 
   const hasActiveFilters = useMemo((): boolean => {
     return !!(userFiltersForm.full_name || 
-           userFiltersForm.team?.length > 0 || 
-           userFiltersForm.group?.length > 0 || 
-           userFiltersForm.roles?.length > 0 ||
+           (userFiltersForm.team && userFiltersForm.team.length > 0) || 
+           (userFiltersForm.group && userFiltersForm.group.length > 0) || 
+           (userFiltersForm.roles && userFiltersForm.roles.length > 0) ||
            userFiltersForm.schedule_type ||
            userFiltersForm.phone ||
            userFiltersForm.email);

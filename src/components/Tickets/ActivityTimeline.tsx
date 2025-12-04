@@ -11,6 +11,10 @@ interface ActivityTimelineProps {
 }
 
 export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ activities }) => {
+  if (!activities || activities.length === 0) {
+    return null;
+  }
+
   return (
     <Timeline>
       {activities.slice(0, 8).map((activity) => (

@@ -1,4 +1,4 @@
-import { FC } from "react";
+import type { FC } from "react";
 import { Card, Row, Col, Typography, theme } from "antd";
 import { CalendarOutlined, ClockCircleOutlined, UserOutlined } from "@ant-design/icons";
 

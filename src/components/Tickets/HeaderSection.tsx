@@ -195,7 +195,7 @@ const TicketDetails: React.FC<{ ticket: ITicket }> = ({ ticket }) => (
     <DetailItem 
       icon="file" 
       label="Тип" 
-      value={ticket.type?.name} 
+      value={ticket.type?.name || 'Не указан'} 
     />
   </Flex>
 );

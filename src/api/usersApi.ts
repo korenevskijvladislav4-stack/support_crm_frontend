@@ -63,7 +63,7 @@ export const usersApi = createApi({
                     transfer_date: transferDate
                 }
             }),
-            invalidatesTags: ['Users', 'Schedule'],
+            invalidatesTags: ['Users'],
         }),
     }),
 });

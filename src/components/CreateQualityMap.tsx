@@ -39,6 +39,8 @@ const CreateQualityMap: React.FC<CreateQualityMapProps> = ({ onSuccess, onCancel
         team_id: values.team_id,
         start_date: values.dates[0].format('YYYY-MM-DD'),
         end_date: values.dates[1].format('YYYY-MM-DD'),
+        chat_count: 10,
+        calls_count: 0,
       }).unwrap();
 
       message.success('Карта качества создана');

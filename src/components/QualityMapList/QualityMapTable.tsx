@@ -4,9 +4,12 @@ import { FileTextOutlined, PlusOutlined } from '@ant-design/icons';
 import { theme } from 'antd';
 const { Title, Text } = Typography;
 
+import type { TableColumnsType } from 'antd';
+import type { QualityMapListItem } from '../../types/quality.types';
+
 interface QualityMapTableProps {
-  columns: unknown[];
-  data: unknown[];
+  columns: TableColumnsType<QualityMapListItem>;
+  data: QualityMapListItem[];
   loading: boolean;
   filters: { page: number; per_page: number; search?: string; team_id?: number; status: string };
   meta?: { total?: number };

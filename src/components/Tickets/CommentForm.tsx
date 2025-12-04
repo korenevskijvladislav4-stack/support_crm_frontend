@@ -224,6 +224,7 @@ const ActionButtons: React.FC<{
   isInternal: boolean;
   onInternalChange: (checked: boolean) => void;
 }> = memo(({ onFileUpload, isUploading, isInternal, onInternalChange }) => {
+  const { token } = theme.useToken();
   const handleInternalSwitch = useCallback((checked: boolean) => {
     onInternalChange(checked);
   }, [onInternalChange]);

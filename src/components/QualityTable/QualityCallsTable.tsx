@@ -956,7 +956,7 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
       </Card>
 
       {/* Модальное окно снятия */}
-      <DeductionModal
+      <DeductionModal 
         open={deductionModalVisible}
         onCancel={() => {
           setDeductionModalVisible(false);
@@ -966,7 +966,14 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
         onSubmit={handleAddDeduction}
         form={deductionForm}
         loading={isCreatingDeduction}
-        selectedCell={selectedCell}
+        selectedCell={selectedCell ? {
+          criteriaId: selectedCell.criteriaId,
+          chatIndex: selectedCell.callIndex,
+          existingDeduction: selectedCell.existingDeduction ? {
+            deduction: selectedCell.existingDeduction.deduction,
+            comment: selectedCell.existingDeduction.comment
+          } : undefined
+        } : null}
         getSelectedChatName={getSelectedCallName}
         getSelectedCriterionName={getSelectedCriterionName}
       />

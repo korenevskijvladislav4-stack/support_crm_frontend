@@ -122,7 +122,7 @@ export const qualityApi = createApi({
       providesTags: ['Users'],
       transformResponse: (response: unknown) => {
         // Если ответ содержит data, извлекаем массив
-        if (response && Array.isArray(response.data)) {
+        if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
           return response.data;
         }
         // Если ответ уже массив, возвращаем как есть
@@ -130,7 +130,7 @@ export const qualityApi = createApi({
           return response;
         }
         // Если ответ объект с data, но data не массив
-        if (response && response.data) {
+        if (response && typeof response === 'object' && 'data' in response) {
           return Array.isArray(response.data) ? response.data : [];
         }
         return [];

@@ -5,7 +5,7 @@ import type { IAttemptForm } from '../../types/attempts.types';
 import type { ITeam } from '../../types/teams.type';
 import type { IGroup } from '../../types/groups.types';
 import type { IRole } from '../../types/role.types';
-import type { IScheduleType } from '../../types/schedule.types';
+import type { IScheduleType } from '../../types/schedule-type.types';
 import styles from '../../styles/attempts/attempt-approve.module.css';
 
 const { Title, Text } = Typography;
