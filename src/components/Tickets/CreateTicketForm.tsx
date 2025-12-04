@@ -1,20 +1,20 @@
 import React from 'react';
 import { Card, Form, Input, Select, Row, Col, Divider, Space, Button, Alert } from 'antd';
-import type { ITicketType, ITicketField } from '../../types/ticket.types';
+import type { ITicketType, ITicketField, ITicketFormValues } from '../../types/ticket.types';
 import styles from '../../styles/tickets/create-ticket.module.css';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 interface CreateTicketFormProps {
-  form: ReturnType<typeof Form.useForm>[0];
-  onFinish: (values: any) => void;
+  form: ReturnType<typeof Form.useForm<ITicketFormValues>>[0];
+  onFinish: (values: ITicketFormValues) => void;
   types?: ITicketType[];
   selectedType: ITicketType | null;
   onTypeChange: (typeId: number) => void;
   isLoading: boolean;
   isError: boolean;
-  error: any;
+  error: unknown;
   renderCustomField: (field: ITicketField) => React.ReactNode;
 }
 

@@ -9,7 +9,6 @@ import styles from '../../styles/quality/create-quality-map.module.css';
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
-const { Option } = Select;
 
 interface QualityMapFormValues {
   user_id: number;

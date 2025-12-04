@@ -10,7 +10,9 @@ export const AVATAR_COLORS = [
   '#fa541c', '#13c2c2', '#eb2f96', '#a0d911', '#2f54eb'
 ];
 
-export const getPriorityConfig = (priority: string) => {
+import type { IPriorityInfo } from '../types/ticket.types';
+
+export const getPriorityConfig = (priority: string): IPriorityInfo => {
   return PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.medium;
 };
 

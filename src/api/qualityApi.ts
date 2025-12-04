@@ -15,8 +15,7 @@ import type {
   UpdateChatIdsRequest,
   UpdateCallIdsRequest,
   QualityMapListResponse,
-  QualityMapsFilter,
-  QualityMapListItem
+  QualityMapsFilter
 } from '../types/quality.types';
 
 export const qualityApi = createApi({
@@ -121,7 +120,7 @@ export const qualityApi = createApi({
         params: teamId ? { team: [teamId] } : {},
       }),
       providesTags: ['Users'],
-      transformResponse: (response: any) => {
+      transformResponse: (response: unknown) => {
         // Если ответ содержит data, извлекаем массив
         if (response && Array.isArray(response.data)) {
           return response.data;

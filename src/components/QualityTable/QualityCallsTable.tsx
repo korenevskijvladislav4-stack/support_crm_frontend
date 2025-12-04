@@ -21,8 +21,6 @@ import {
 import { 
   EditOutlined, 
   MoreOutlined, 
-  TeamOutlined, 
-  CalendarOutlined,
   PhoneOutlined,
   BarChartOutlined,
   SearchOutlined,
@@ -32,7 +30,6 @@ import {
 } from '@ant-design/icons';
 import { useGetCriteriaQuery, useCreateCallDeductionMutation, useUpdateQualityMapCallIdsMutation } from '../../api/qualityApi';
 import type { QualityMap, QualityCriterion, QualityCallDeduction } from '../../types/quality.types';
-import { formatDate } from '../../utils/dateUtils';
 import DeductionModal from './DeductionModal';
 import EditCallModal from './EditCallModal';
 

@@ -7,16 +7,11 @@ import {
   Badge,
   Typography,
   Tooltip,
-  theme,
   Select,
   Button
 } from 'antd';
 import { 
-  SearchOutlined, 
-  PlusOutlined, 
-  EyeOutlined,
-  FilterOutlined,
-  ReloadOutlined 
+  EyeOutlined
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { useGetTicketsQuery, useGetTicketStatusesQuery, useGetTicketTypesQuery } from '../../api/ticketsApi';
@@ -25,11 +20,10 @@ import type { TableColumnsType } from 'antd';
 import { TicketsPageHeader, TicketsFilters, TicketsStats } from '../../components/Tickets';
 import styles from '../../styles/tickets/tickets-page.module.css';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Option } = Select;
 
 const TicketsListPage: React.FC = () => {
-  const { token } = theme.useToken();
   const [filters, setFilters] = useState<ITicketFilters>({});
   const { data: tickets, isLoading } = useGetTicketsQuery(filters);
   const { data: statuses } = useGetTicketStatusesQuery();
@@ -204,7 +198,7 @@ const TicketsListPage: React.FC = () => {
         title={
           <Space size="small">
             <span>Список тикетов</span>
-            <Badge count={tickets?.data?.length || 0} showZero style={{ backgroundColor: token.colorPrimary }} />
+            <Badge count={tickets?.data?.length || 0} showZero style={{ backgroundColor: '#1890ff' }} />
           </Space>
         }
         extra={
@@ -212,7 +206,7 @@ const TicketsListPage: React.FC = () => {
             {isLoading ? 'Загрузка...' : `Обновлено: ${new Date().toLocaleTimeString()}`}
           </Text>
         }
-        style={{ background: token.colorBgContainer }}
+        style={{ background: '#ffffff' }}
       >
         <Table<ITicket>
           dataSource={tickets?.data}

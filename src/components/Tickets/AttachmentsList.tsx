@@ -23,7 +23,6 @@ export const AttachmentsList: React.FC<AttachmentsListProps> = ({
   onDelete,
   onPreview
 }) => {
-  const { token } = theme.useToken();
   return (
     <List
       size="small"

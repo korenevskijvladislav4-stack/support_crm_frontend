@@ -1,7 +1,6 @@
 import React from 'react';
 import { Modal, Form, Input, Switch, Row, Col, Typography } from 'antd';
 import type { ITicketType } from '../../../types/ticket.types';
-import styles from '../../../styles/settings/settings-modals.module.css';
 
 const { Text } = Typography;
 

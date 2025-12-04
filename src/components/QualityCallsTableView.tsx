@@ -15,14 +15,11 @@ import {
 import { 
   PhoneOutlined,
   TrophyOutlined,
-  TeamOutlined,
-  CalendarOutlined,
   BarChartOutlined,
   CloseCircleOutlined,
   FolderOutlined
 } from '@ant-design/icons';
 import type { QualityMap, QualityCriterion, QualityCallDeduction } from '../types/quality.types';
-import { formatDate } from '../utils/dateUtils';
 import { useGetCriteriaQuery } from '../api/qualityApi';
 
 const { Text } = Typography;

@@ -32,7 +32,7 @@ const EditTicketPage: React.FC = () => {
     }
   }, [ticket, form]);
 
-  const onFinish = async (values: any) => {
+  const onFinish = async (values: ITicketEditFormValues) => {
     try {
       await updateTicket({
         id: Number(id),

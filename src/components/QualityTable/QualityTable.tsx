@@ -788,10 +788,9 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
       return (categoryA?.name || '').localeCompare(categoryB?.name || '');
     });
 
-    sortedCategories.forEach(([categoryKey, criteria], categoryIndex) => {
+    sortedCategories.forEach(([, criteria], categoryIndex) => {
       const firstCriterion = criteria[0];
       const categoryName = firstCriterion.category?.name || 'Без категории';
-      const categoryId = firstCriterion.category?.id;
 
       // Добавляем критерии этой категории с информацией о категории
       criteria.forEach((criterion: QualityCriterion, criterionIndex) => {

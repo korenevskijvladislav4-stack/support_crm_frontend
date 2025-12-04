@@ -1,4 +1,6 @@
 // types/quality.ts
+import type { Dayjs } from 'dayjs';
+
 export interface User {
   id: number;
   name: string;
@@ -176,7 +178,7 @@ export interface QualityMapListItem {
 export interface QualityMapFormValues {
   user_id: number;
   team_id: number;
-  dates: [any, any]; // dayjs.Dayjs type from antd
+  dates: [Dayjs, Dayjs];
   chat_count: number;
   calls_count?: number;
 }

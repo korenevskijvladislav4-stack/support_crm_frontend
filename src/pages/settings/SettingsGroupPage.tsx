@@ -18,8 +18,7 @@ import { GroupModal } from "../../components/Settings/Modals";
 import styles from "../../styles/settings/settings-pages.module.css";
 import {
   TeamOutlined,
-  CrownOutlined,
-  UserOutlined
+  CrownOutlined
 } from '@ant-design/icons';
 import { 
   useCreateGroupMutation, 
@@ -210,7 +209,7 @@ const SettingsGroupPage: FC = () => {
       title: 'Ответственный',
       dataIndex: 'supervisor',
       width: 200,
-      render: (supervisor: IGroup['supervisor'], record: IGroup) => {
+      render: (supervisor: IGroup['supervisor']) => {
         if (!supervisor) {
           return <Text type="secondary">Не назначен</Text>;
         }

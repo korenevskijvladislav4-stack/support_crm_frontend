@@ -12,7 +12,6 @@ interface CreateScheduleFormProps {
   onFormChange: (field: keyof IScheduleForm, value: FormFieldValue) => void;
   teams?: ITeam[];
   isLoadingTeams: boolean;
-  onCancel: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
   isValid: boolean;
@@ -23,7 +22,6 @@ const CreateScheduleForm: React.FC<CreateScheduleFormProps> = ({
   onFormChange,
   teams,
   isLoadingTeams,
-  onCancel,
   onSubmit,
   isSubmitting,
   isValid

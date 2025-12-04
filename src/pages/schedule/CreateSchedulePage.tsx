@@ -3,14 +3,9 @@ import {
   Row, 
   Col, 
   Typography, 
-  Alert, 
   Steps,
   Button,
-  Space,
-  Form,
-  Select,
-  DatePicker,
-  Divider
+  Space
 } from "antd";
 import { useState, type FC } from "react";
 import { type FormFieldValue, type IScheduleForm } from "../../types/schedule.types";
@@ -18,14 +13,10 @@ import { useGetAllTeamsQuery } from "../../api/teamsApi";
 import { useCreateScheduleMutation } from "../../api/scheduleApi";
 import { useNavigate } from "react-router-dom";
 import { CreateScheduleForm } from "../../components/Schedule";
-import styles from "../../styles/schedule/create-schedule.module.css";
 import {
   CalendarOutlined,
-  TeamOutlined,
-  PlayCircleOutlined,
   CheckCircleOutlined,
-  ArrowLeftOutlined,
-  ClockCircleOutlined
+  ArrowLeftOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;

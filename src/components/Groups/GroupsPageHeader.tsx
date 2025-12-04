@@ -1,7 +1,6 @@
 import React from 'react';
 import { Select, Button, Space, Typography } from 'antd';
 import { TeamOutlined, PlusOutlined } from '@ant-design/icons';
-import type { GroupStatusType } from '../../types/groups.types';
 import styles from '../../styles/groups/groups-page.module.css';
 
 const { Title, Text } = Typography;

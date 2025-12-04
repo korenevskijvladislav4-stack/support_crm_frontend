@@ -2,7 +2,6 @@ import React from 'react';
 import { Modal, Form, Select, InputNumber, Input } from 'antd';
 import type { IPenalty, IPenaltyForm } from '../../types/penalty.types';
 import type { IUser } from '../../types/user.types';
-import styles from '../../styles/penalties/penalties-page.module.css';
 
 const { Option } = Select;
 const { TextArea } = Input;

@@ -4,7 +4,17 @@ import { FileTextOutlined, PlusOutlined } from '@ant-design/icons';
 import { theme } from 'antd';
 const { Title, Text } = Typography;
 
-const QualityMapTable = ({
+interface QualityMapTableProps {
+  columns: unknown[];
+  data: unknown[];
+  loading: boolean;
+  filters: { page: number; per_page: number; search?: string; team_id?: number; status: string };
+  meta?: { total?: number };
+  onTableChange: (pagination: unknown, filters: unknown, sorter: unknown) => void;
+  navigate: (path: string) => void;
+}
+
+const QualityMapTable: React.FC<QualityMapTableProps> = ({
   columns,
   data,
   loading,
@@ -12,7 +22,7 @@ const QualityMapTable = ({
   meta,
   onTableChange,
   navigate
-}: any) => {
+}) => {
   const { token } = theme.useToken();
 
   return (

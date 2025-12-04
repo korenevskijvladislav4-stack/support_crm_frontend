@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Row, Col, Typography, theme } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useCreateTicketMutation, useGetTicketTypesQuery } from '../../api/ticketsApi';
-import type { ITicketType, ITicketField } from '../../types/ticket.types';
+import type { ITicketType, ITicketField, ITicketFormValues } from '../../types/ticket.types';
 import { CreateTicketForm, TicketTips } from '../../components/Tickets';
 import styles from '../../styles/tickets/create-ticket.module.css';
 
@@ -54,7 +54,7 @@ const CreateTicketPage: React.FC = () => {
     }
   };
 
-  const onFinish = async (values: any) => {
+  const onFinish = async (values: ITicketFormValues) => {
     try {
       const { custom_fields, ...ticketData } = values;
       

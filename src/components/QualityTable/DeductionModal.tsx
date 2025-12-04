@@ -1,9 +1,6 @@
 import React from 'react';
 import { Modal, Form, InputNumber, Input, Button, Space, theme } from 'antd';
 import { SaveOutlined, InfoCircleOutlined, BarChartOutlined } from '@ant-design/icons';
-import { Typography } from 'antd';
-
-const { Text } = Typography;
 
 interface DeductionFormValues {
   deduction: number;
@@ -23,7 +20,7 @@ interface DeductionModalProps {
   open: boolean;
   onCancel: () => void;
   onSubmit: (values: DeductionFormValues) => void;
-  form: any;
+  form: ReturnType<typeof Form.useForm<DeductionFormValues>>[0];
   loading: boolean;
   selectedCell: SelectedCell | null;
   getSelectedCriterionName: () => string;

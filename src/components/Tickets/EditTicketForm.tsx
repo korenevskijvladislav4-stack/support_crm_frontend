@@ -1,19 +1,19 @@
 import React from 'react';
 import { Card, Form, Input, Select, Row, Col, Space, Button, Alert } from 'antd';
 import { Badge } from 'antd';
-import type { ITicketStatus } from '../../types/ticket.types';
+import type { ITicketStatus, ITicketEditFormValues } from '../../types/ticket.types';
 import styles from '../../styles/tickets/edit-ticket.module.css';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 interface EditTicketFormProps {
-  form: ReturnType<typeof Form.useForm>[0];
-  onFinish: (values: any) => void;
+  form: ReturnType<typeof Form.useForm<ITicketEditFormValues>>[0];
+  onFinish: (values: ITicketEditFormValues) => void;
   statuses?: ITicketStatus[];
   isLoading: boolean;
   isError: boolean;
-  error: any;
+  error: unknown;
   onCancel: () => void;
 }
 

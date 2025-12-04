@@ -4,8 +4,6 @@ import { Card, Input, Button, Tag, message, Space } from 'antd';
 import { PlusOutlined} from '@ant-design/icons';
 import { useUpdateQualityMapChatIdsMutation } from '../api/qualityApi';
 
-const { TextArea } = Input;
-
 interface ChatIdsManagerProps {
   qualityMapId: number;
   currentChatIds: string[];
@@ -43,7 +41,7 @@ const ChatIdsManager: React.FC<ChatIdsManagerProps> = ({
 
       onChatIdsUpdated(chatIds);
       message.success('ID чатов обновлены');
-    } catch (error) {
+    } catch {
       message.error('Ошибка при обновлении ID чатов');
     }
   };

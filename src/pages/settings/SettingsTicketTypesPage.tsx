@@ -15,7 +15,6 @@ import SettingsActionButtons from '../../components/Settings/SettingsActionButto
 import { TicketTypeModal } from '../../components/Settings/Modals';
 import styles from '../../styles/settings/settings-pages.module.css';
 import { 
-  PlusOutlined,
   SettingOutlined
 } from '@ant-design/icons';
 import { 

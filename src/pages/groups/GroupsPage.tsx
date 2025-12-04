@@ -23,13 +23,12 @@ import {
   StarOutlined,
   EyeOutlined,
   EditOutlined,
-  PlusOutlined,
   PhoneOutlined,
   CrownOutlined,
   SafetyCertificateOutlined
 } from '@ant-design/icons';
 
-import type { Group, GroupMember, GroupStatusType } from '../../types/groups.types';
+import type { Group, GroupMember } from '../../types/groups.types';
 
 const { Title, Text } = Typography;
 

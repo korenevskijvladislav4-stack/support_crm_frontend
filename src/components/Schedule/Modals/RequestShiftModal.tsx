@@ -1,7 +1,6 @@
 import React from 'react';
 import { Modal, Form, Input, InputNumber } from 'antd';
 import dayjs from 'dayjs';
-import type { IShiftRequest } from '../../../types/shifts.types';
 
 interface RequestShiftModalProps {
   open: boolean;

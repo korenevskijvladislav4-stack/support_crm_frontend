@@ -1,10 +1,9 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Card, Space, Button, Flex, Input, Select, theme } from 'antd';
-import { SearchOutlined, ReloadOutlined, ClearOutlined, MailOutlined, PhoneOutlined, CheckOutlined } from '@ant-design/icons';
+import { ReloadOutlined, ClearOutlined, MailOutlined, PhoneOutlined, CheckOutlined } from '@ant-design/icons';
 import type { IUserFilters } from '../../types/user.types';
 import { useGetAllScheduleTypesQuery } from '../../api/scheduleTypesApi';
 
-const { Search } = Input;
 const { Option } = Select;
 
 interface UsersFiltersProps {

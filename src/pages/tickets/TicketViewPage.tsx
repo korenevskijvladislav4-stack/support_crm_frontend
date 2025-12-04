@@ -25,7 +25,7 @@ import { CommentsList } from '../../components/Tickets/CommentsList';
 
 // Хуки и утилиты
 import { useFileHandlers } from '../../hooks/useFileHandlers';
-import type { ITicket, ITicketAttachment } from '../../types/ticket.types';
+import type { ITicketAttachment } from '../../types/ticket.types';
 
 const { Text } = Typography;
 
@@ -122,7 +122,7 @@ export const TicketViewPage: React.FC = () => {
       // Обновление данных
       refetch();
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to add comment or attachment:', err);
       message.error(err?.data?.message || 'Ошибка при добавлении комментария');
     } finally {
@@ -135,7 +135,8 @@ export const TicketViewPage: React.FC = () => {
     ticket, 
     createComment, 
     uploadAttachment, 
-    refetch
+    refetch,
+    setAttachments
   ]);
 
   // Обработчик клавиш для комментария
@@ -162,13 +163,13 @@ export const TicketViewPage: React.FC = () => {
       document.body.removeChild(a);
       
       message.success('Файл скачивается');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to download attachment:', err);
       message.error(err?.data?.message || 'Ошибка при скачивании файла');
     } finally {
       setIsDownloading(null);
     }
-  }, [downloadAttachment]);
+  }, [downloadAttachment, setIsDownloading]);
 
   // Обработчик удаления файла
   const handleDeleteAttachment = useCallback(async (attachmentId: number) => {
@@ -176,7 +177,7 @@ export const TicketViewPage: React.FC = () => {
       await deleteAttachment(attachmentId).unwrap();
       message.success('Файл удален');
       refetch();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete attachment:', err);
       message.error(err?.data?.message || 'Ошибка при удалении файла');
     }
@@ -194,7 +195,7 @@ export const TicketViewPage: React.FC = () => {
       }).unwrap();
       message.success('Статус обновлен');
       refetch();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update status:', err);
       message.error(err?.data?.message || 'Ошибка при обновлении статуса');
     } finally {
@@ -210,7 +211,7 @@ export const TicketViewPage: React.FC = () => {
       try {
         const blob = await previewAttachment(file.id).unwrap();
         handlePreview(file, () => Promise.resolve(blob));
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to preview attachment:', err);
         message.error(err?.data?.message || 'Ошибка при просмотре файла');
       }

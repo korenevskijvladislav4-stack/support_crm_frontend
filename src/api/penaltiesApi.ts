@@ -1,5 +1,5 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
-import type { IPenalty, IPenaltyForm, PenaltyStatus, PenaltiesResponse, IPenaltiesFilter } from '../types/penalty.types';
+import type { IPenalty, IPenaltyForm, PenaltiesResponse, IPenaltiesFilter } from '../types/penalty.types';
 import { baseQueryWithReauth } from './baseQueries/baseQueryWithReauth';
 
 export const penaltiesApi = createApi({

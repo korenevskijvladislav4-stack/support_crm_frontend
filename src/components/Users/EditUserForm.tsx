@@ -13,7 +13,7 @@ const { Option } = Select;
 
 interface EditUserFormProps {
   form: IUserForm;
-  onFormChange: (field: keyof IUserForm, value: any) => void;
+  onFormChange: (field: keyof IUserForm, value: unknown) => void;
   teams?: ITeam[];
   groups?: IGroup[];
   availableRoles: IRole[];

@@ -39,7 +39,7 @@ export interface ITicket {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   creator_id: number;
   team_id: number | null;
-  custom_fields: Record<string, any>;
+  custom_fields: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   type?: ITicketType;
@@ -82,8 +82,8 @@ export interface ITicketActivity {
   user_id: number;
   type: string;
   description: string;
-  old_data: Record<string, any> | null;
-  new_data: Record<string, any> | null;
+  old_data: Record<string, unknown> | null;
+  new_data: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   user?: IUser;
@@ -96,4 +96,26 @@ export interface ITicketFilters {
   priority?: string;
   team_id?: number;
   creator_id?: number;
+}
+
+export interface ITicketFormValues {
+  title: string;
+  description: string;
+  type_id: number;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  custom_fields?: Record<string, unknown>;
+}
+
+export interface ITicketEditFormValues {
+  title: string;
+  description: string;
+  status_id: number;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+}
+
+export interface IPriorityInfo {
+  icon: string;
+  text: string;
+  color: string;
+  gradient: string;
 }

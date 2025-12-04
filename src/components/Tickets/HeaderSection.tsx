@@ -10,7 +10,7 @@ import {
   FileTextOutlined 
 } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
-import type { ITicket } from '../../types/ticket.types';
+import type { ITicket, IPriorityInfo } from '../../types/ticket.types';
 import { getPriorityConfig } from '../../utils/ticketUtils';
 
 const { Title, Text } = Typography;
@@ -124,7 +124,7 @@ const TicketTitle: React.FC<{ title: string }> = ({ title }) => (
   </Flex>
 );
 
-const TicketMetadata: React.FC<{ ticket: ITicket; priority: any }> = ({ ticket, priority }) => (
+const TicketMetadata: React.FC<{ ticket: ITicket; priority: IPriorityInfo }> = ({ ticket, priority }) => (
   <Flex align="center" gap={24} wrap style={{ marginBottom: 24 }}>
     <MetadataBadge content={`#${ticket.ticket_number}`} />
     <StatusBadge status={ticket.status} />
@@ -157,7 +157,7 @@ const StatusBadge: React.FC<{ status: ITicket['status'] }> = ({ status }) => (
   </Flex>
 );
 
-const PriorityBadge: React.FC<{ priority: any }> = ({ priority }) => (
+const PriorityBadge: React.FC<{ priority: IPriorityInfo }> = ({ priority }) => (
   <Flex align="center" gap={12}>
     <div style={badgeStyle}>
       <Text style={{ color: 'white', fontSize: '16px', fontWeight: 600 }}>
@@ -239,7 +239,7 @@ const iconStyle: React.CSSProperties = {
   border: '1px solid rgba(255,255,255,0.2)'
 };
 
-const ActionButtons: React.FC<{ ticketId: number; navigate: any; priority: any }> = ({ 
+const ActionButtons: React.FC<{ ticketId: number; navigate: (path: string) => void; priority: IPriorityInfo }> = ({ 
   ticketId, navigate, priority 
 }) => (
   <Space direction="vertical" style={{ position: 'relative', zIndex: 2 }}>
