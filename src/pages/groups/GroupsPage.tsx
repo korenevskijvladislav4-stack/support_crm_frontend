@@ -13,6 +13,7 @@ import {
   Button,
   Space,
   Rate,
+  type BadgeProps,
 } from "antd";
 import { GroupsPageHeader } from "../../components/Groups";
 import styles from "../../styles/groups/groups-page.module.css";
@@ -428,7 +429,7 @@ const GroupsPage: FC = () => {
                               {member.name[0]}{member.surname[0]}
                             </Avatar>
                             <Badge 
-                              status={getMemberStatusColor(member.status) as statusTypes} 
+                              status={getMemberStatusColor(member.status) as BadgeProps['status']} 
                               style={{ 
                                 position: 'absolute',
                                 bottom: 2,

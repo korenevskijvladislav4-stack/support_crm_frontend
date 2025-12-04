@@ -18,11 +18,6 @@ import SettingsRolesPage from './pages/settings/SettingsRolesPage'
 import SettingsQualityCriteriasPage from './pages/settings/SettingsQualityCriteriasPage'
 import UserProfile from './pages/users/UserProfile'
 import { useState, useEffect } from 'react'
-import TicketsListPage from './pages/tickets/TicketsListPage'
-import CreateTicketPage from './pages/tickets/CreateTicketPage'
-import TicketViewPage from './pages/tickets/TicketViewPage'
-import EditTicketPage from './pages/tickets/EditTicketPage'
-import SettingsTicketTypesPage from './pages/settings/SettingsTicketTypesPage'
 import CreateQualityMapPage from './pages/quality/CreateQualityMapPage'
 import EditQualityMapPage from './pages/quality/EditQualityPage'
 import QualityMapDetailPage from './pages/quality/QualityMapDetailPage'
@@ -279,17 +274,12 @@ function App() {
                 <Route path="/settings/groups" element={<SettingsGroupPage />} />
                 <Route path="/settings/teams" element={<SettingsTeamsPage />} />
                 <Route path="/settings/roles" element={<SettingsRolesPage />} />
-                <Route path="/settings/ticket_types" element={<SettingsTicketTypesPage />} />
                 <Route path="/settings/quality_criterias" element={<SettingsQualityCriteriasPage />} />
                 <Route path="/quality" element={<QualityMapsListPage />} />
                 <Route path="/quality/create" element={<CreateQualityMapPage onSuccess={(id) => navigate(`/quality/${id}`)} />} />
                 <Route path="/quality/:id/edit" element={<EditQualityMapPage />} />
                 <Route path="/quality/:id" element={<QualityMapDetailPage />} />
 
-                <Route path="/tickets" element={<TicketsListPage />} />
-                <Route path="/tickets/:id" element={<TicketViewPage />} />
-                <Route path="/tickets/:id/edit" element={<EditTicketPage />} />
-                <Route path="/tickets/create" element={<CreateTicketPage />} />
                 <Route path="/penalties" element={<PenaltiesPage />} />
                 <Route path="*" element={<Navigate to="/users" replace />} />
               </Route>

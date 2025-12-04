@@ -3,16 +3,17 @@ import { Card, Tabs } from 'antd';
 import CreateQualityMap from './CreateQualityMapPage';
 import QualityTable from '../../components/QualityTable/QualityTable';
 import { useGetQualityMapQuery } from '../../api/qualityApi';
+import { skipToken } from '@reduxjs/toolkit/query';
 
 const QualityControlPage = () => {
   const [activeTab, setActiveTab] = useState('create');
-  const [currentMapId, setCurrentMapId] = useState(null);
+  const [currentMapId, setCurrentMapId] = useState<number | null>(null);
   
-  const { data: qualityMap } = useGetQualityMapQuery(currentMapId, {
+  const { data: qualityMap } = useGetQualityMapQuery(currentMapId ?? skipToken, {
     skip: !currentMapId,
   });
 
-  const handleMapCreated = (mapId) => {
+  const handleMapCreated = (mapId: number) => {
     setCurrentMapId(mapId);
     setActiveTab('view');
   };
@@ -23,7 +24,7 @@ const QualityControlPage = () => {
       label: 'Создание карты',
       children: <CreateQualityMap onSuccess={handleMapCreated} />,
     },
-    ...(currentMapId ? [{
+    ...(currentMapId && qualityMap ? [{
       key: 'view',
       label: 'Текущая карта',
       children: <QualityTable qualityMap={qualityMap} />,

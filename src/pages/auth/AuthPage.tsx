@@ -26,8 +26,8 @@ const AuthPage: FC = () => {
     }
   }
 
-  const isFormValid = () => {
-    return authForm.email && authForm.password
+  const isFormValid = (): boolean => {
+    return !!(authForm.email && authForm.password)
   }
 
   return (

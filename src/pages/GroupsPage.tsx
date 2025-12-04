@@ -14,6 +14,7 @@ import {
   Space,
   Select,
   Rate,
+  type BadgeProps,
 } from "antd";
 import {
   TeamOutlined,
@@ -460,7 +461,7 @@ const GroupsPage: FC = () => {
                               {member.name[0]}{member.surname[0]}
                             </Avatar>
                             <Badge 
-                              status={getMemberStatusColor(member.status) as statusTypes} 
+                              status={getMemberStatusColor(member.status) as BadgeProps['status']} 
                               style={{ 
                                 position: 'absolute',
                                 bottom: 2,

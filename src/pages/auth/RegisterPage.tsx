@@ -42,11 +42,11 @@ const RegisterPage: FC = () => {
     }
   }
 
-  const isFormValid = () => {
-    return registrationForm.name && 
+  const isFormValid = (): boolean => {
+    return !!(registrationForm.name && 
            registrationForm.surname && 
            registrationForm.email && 
-           registrationForm.password
+           registrationForm.password)
   }
 
   return (

@@ -64,8 +64,8 @@ const CreateSchedulePage: FC = () => {
     }
   };
 
-  const isFormValid = () => {
-    return createScheduleForm.team_id && createScheduleForm.top_start && createScheduleForm.bottom_start;
+  const isFormValid = (): boolean => {
+    return !!(createScheduleForm.team_id && createScheduleForm.top_start && createScheduleForm.bottom_start);
   };
 
   const steps = [
@@ -149,7 +149,6 @@ const CreateSchedulePage: FC = () => {
             onFormChange={handleFormChange}
             teams={teams}
             isLoadingTeams={isTeamsLoading}
-            onCancel={() => navigate('/schedule')}
             onSubmit={onSubmitHandler}
             isSubmitting={isCreating}
             isValid={isFormValid()}

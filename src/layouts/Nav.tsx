@@ -76,12 +76,6 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
       className: location.pathname === '/quality' ? 'ant-menu-item-selected' : '',
     },
     {
-      key: '/tickets',
-      icon: <LineChartOutlined style={{ fontSize: '16px' }} />,
-      label: <Link to="/tickets">Тикеты</Link>,
-      className: location.pathname === '/tickets' ? 'ant-menu-item-selected' : '',
-    },
-    {
       key: '/penalties',
       icon: <ExclamationCircleOutlined style={{ fontSize: '16px' }} />,
       label: <Link to="/penalties">Штрафная таблица</Link>,
@@ -124,11 +118,6 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
           key: '/settings/quality_criterias',
           icon: <LineChartOutlined style={{ fontSize: '14px' }} />,
           label: <Link to='/settings/quality_criterias'>Критерии качества</Link>,
-        },
-        {
-          key: '/settings/ticket_types',
-          icon: <LineChartOutlined style={{ fontSize: '14px' }} />,
-          label: <Link to='/settings/ticket_types'>Типы запросов</Link>,
         },
       ],
     },

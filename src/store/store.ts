@@ -11,7 +11,6 @@ import { scheduleApi } from "../api/scheduleApi";
 import { permissionsApi } from "../api/permissionsApi";
 import { qualityApi } from "../api/qualityApi";
 import { qualityCriteriasApi } from "../api/qualityCriteriasApi";
-import { ticketsApi } from "../api/ticketsApi";
 import { shiftRequestApi } from "../api/shiftRequestApi";
 import { penaltiesApi } from "../api/penaltiesApi";
 
@@ -38,7 +37,6 @@ const rootReducer = combineReducers({
     [permissionsApi.reducerPath]: permissionsApi.reducer,
     [qualityApi.reducerPath]: qualityApi.reducer,
     [qualityCriteriasApi.reducerPath]: qualityCriteriasApi.reducer,
-    [ticketsApi.reducerPath]: ticketsApi.reducer,
     [shiftRequestApi.reducerPath]: shiftRequestApi.reducer,
     [penaltiesApi.reducerPath]: penaltiesApi.reducer,
 })
@@ -59,7 +57,6 @@ export const store = configureStore({
             permissionsApi.middleware,
             qualityApi.middleware, 
             qualityCriteriasApi.middleware,
-            ticketsApi.middleware,
             shiftRequestApi.middleware,
             penaltiesApi.middleware
             ])
