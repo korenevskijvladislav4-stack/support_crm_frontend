@@ -1,0 +1,12 @@
+.schedule__filters{
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+.filters__wrapper{
+    display: flex;
+    gap: 10px;
+}
+.schedule__result-column{
+    background: #000;
+}

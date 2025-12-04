@@ -1,0 +1,34 @@
+.pageContainer {
+  padding: clamp(12px, 2vw, 24px);
+}
+
+.headerContainer {
+  margin-bottom: 24px;
+}
+
+.headerTitleSection {
+  flex: 1 1 auto;
+  min-width: 200px;
+}
+
+.title {
+  margin: 0;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: clamp(20px, 2.5vw, 24px);
+}
+
+.description {
+  font-size: 14px;
+}
+
+.filtersCard {
+  margin-bottom: 24px;
+}
+
+.statsContainer {
+  margin-bottom: 24px;
+}
+

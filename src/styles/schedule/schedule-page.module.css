@@ -1,0 +1,32 @@
+.pageContainer {
+  padding: 32px;
+  background: var(--ant-color-bg-layout);
+  min-height: 100vh;
+}
+
+.contentWrapper {
+  margin: 0 auto;
+}
+
+.emptyTableContainer {
+  padding: 80px 0;
+  text-align: center;
+}
+
+.emptyTableIcon {
+  font-size: 56px;
+  margin-bottom: 16px;
+}
+
+.emptyTableTitle {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.emptyTableDescription {
+  display: block;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+

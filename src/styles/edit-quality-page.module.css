@@ -1,0 +1,28 @@
+.quality_review_list__container {
+    width: 100%;
+    height: 100%;
+}
+
+.quality_review_list__sidebar {
+    width: 30%;
+   
+    height: 100%;
+}
+
+
+.quality_review_list__items {
+    height: 100%;
+    width:100%;
+    scrollbar-width: thin;
+    border-right: 1px solid #f0f0f0;
+    overflow-y: scroll;
+}
+
+.quality_review__deductions{
+    width:100%;
+    height:100%;
+}
+.deductions__container{
+    height:10%;
+    overflow-y: scroll;
+}

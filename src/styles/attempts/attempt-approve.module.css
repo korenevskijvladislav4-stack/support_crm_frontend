@@ -1,0 +1,54 @@
+.pageContainer {
+  padding: clamp(12px, 2vw, 24px);
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.headerContainer {
+  margin-bottom: 24px;
+}
+
+.formCard {
+  margin-bottom: 24px;
+}
+
+.previewCard {
+  margin-bottom: 24px;
+}
+
+.avatarContainer {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.avatar {
+  background-color: #1890ff;
+  margin-bottom: 12px;
+}
+
+.userName {
+  margin: 0;
+}
+
+.rolesContainer {
+  margin-top: 4px;
+}
+
+.roleTag {
+  margin: 2px;
+}
+
+.helpText {
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.alert {
+  margin-bottom: 16px;
+}
+
+.approveButton {
+  height: 50px;
+}
+

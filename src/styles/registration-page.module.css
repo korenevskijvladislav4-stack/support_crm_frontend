@@ -1,0 +1,24 @@
+.registration{
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+.registration__form{
+    width:400px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.registration__link{
+    font-size: 12px;
+}
+.registration__img{
+    width:500px;
+    padding:40px;
+}
+.registration__button{
+    width:100%;
+}

@@ -1,0 +1,22 @@
+.pageContainer {
+  padding: clamp(12px, 2vw, 24px);
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.headerContainer {
+  margin-bottom: 24px;
+}
+
+.formCard {
+  margin-bottom: 24px;
+}
+
+.errorAlert {
+  margin-bottom: 16px;
+}
+
+.tipsCard {
+  margin-bottom: 24px;
+}
+

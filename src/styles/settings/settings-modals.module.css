@@ -1,0 +1,69 @@
+.modalTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.formItem {
+  margin-bottom: 24px;
+}
+
+.formItemSmall {
+  margin-bottom: 8px;
+}
+
+.formItemLarge {
+  margin-bottom: 20px;
+}
+
+.optionContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.helpText {
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.infoBox {
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.infoText {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.infoIcon {
+  margin-right: 4px;
+}
+
+.permissionsHeader {
+  margin-bottom: 16px;
+}
+
+.alert {
+  margin-bottom: 16px;
+}
+
+.selectedTitle {
+  margin-bottom: 8px;
+  display: block;
+}
+
+.permissionsList {
+  max-height: 120px;
+  overflow-y: auto;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.permissionTag {
+  font-size: 11px;
+}
+

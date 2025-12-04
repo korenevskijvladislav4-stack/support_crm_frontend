@@ -1,0 +1,9 @@
+.quality_review_item__data{
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.quality_review_item{
+    cursor: pointer;
+    transition: 0.5s;
+}

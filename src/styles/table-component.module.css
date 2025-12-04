@@ -1,0 +1,77 @@
+.table td{
+    border-radius: 8px;
+    cursor: pointer;
+}
+.table{
+    width: 100%;
+}
+.table__wrapper{
+     display: flex;
+    align-items: start;
+    justify-content: start;
+    width:100%;
+}
+
+/* Уменьшаем высоту ячеек таблицы */
+.table :global(.ant-table-tbody > tr > td) {
+    padding: 6px 12px !important;
+    line-height: 1.5 !important;
+    font-size: 13px !important;
+}
+
+.table :global(.ant-table-thead > tr > th) {
+    padding: 8px 12px !important;
+    line-height: 1.5 !important;
+    font-size: 13px !important;
+}
+
+/* Разделители столбцов - более заметные */
+.table :global(.ant-table-tbody > tr > td) {
+    border-right: 1px solid rgba(0, 0, 0, 0.12) !important;
+    position: relative;
+}
+
+/* Исключаем последний столбец и зафиксированные справа */
+.table :global(.ant-table-tbody > tr > td.ant-table-cell-fix-right),
+.table :global(.ant-table-tbody > tr > td.ant-table-cell-fix-right-first),
+.table :global(.ant-table-tbody > tr > td:last-child:not(.ant-table-cell-fix-left)) {
+    border-right: none !important;
+}
+
+.table :global(.ant-table-thead > tr > th) {
+    border-right: 1px solid rgba(0, 0, 0, 0.12) !important;
+    position: relative;
+}
+
+/* Исключаем последний столбец и зафиксированные справа */
+.table :global(.ant-table-thead > tr > th.ant-table-cell-fix-right),
+.table :global(.ant-table-thead > tr > th.ant-table-cell-fix-right-first),
+.table :global(.ant-table-thead > tr > th:last-child:not(.ant-table-cell-fix-left)) {
+    border-right: none !important;
+}
+
+/* Темная тема для разделителей */
+[data-theme="dark"] .table :global(.ant-table-tbody > tr > td) {
+    border-right-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-theme="dark"] .table :global(.ant-table-thead > tr > th) {
+    border-right-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Улучшаем видимость границ строк */
+.table :global(.ant-table-tbody > tr > td) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.table :global(.ant-table-thead > tr > th) {
+    border-bottom: 2px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme="dark"] .table :global(.ant-table-tbody > tr > td) {
+    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .table :global(.ant-table-thead > tr > th) {
+    border-bottom-color: rgba(255, 255, 255, 0.15) !important;
+}

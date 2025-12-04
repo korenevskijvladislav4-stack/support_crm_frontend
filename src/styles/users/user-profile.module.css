@@ -1,0 +1,56 @@
+.headerContainer {
+  margin-bottom: 24px;
+}
+
+.title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.description {
+  font-size: 16px;
+}
+
+.infoCard {
+  margin-bottom: 24px;
+}
+
+.statsCard {
+  margin-bottom: 24px;
+}
+
+.skillsCard {
+  margin-bottom: 24px;
+}
+
+.qualityCard {
+  margin-bottom: 24px;
+}
+
+.scheduleCard {
+  margin-bottom: 24px;
+}
+
+.activityCard {
+  margin-bottom: 24px;
+}
+
+.achievementsCard {
+  margin-bottom: 24px;
+}
+

@@ -1,0 +1,54 @@
+.pageContainer {
+  padding: clamp(12px, 2vw, 24px);
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.stepsCard {
+  margin-bottom: 24px;
+}
+
+.formCard {
+  margin-bottom: 24px;
+}
+
+.previewCard {
+  margin-bottom: 24px;
+}
+
+.avatarContainer {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.avatar {
+  background-color: #1890ff;
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+}
+
+.criteriaContainer {
+  margin-top: 4px;
+}
+
+.criterionTag {
+  margin: 2px;
+  font-size: 10px;
+}
+
+.moreTag {
+  font-size: 10px;
+}
+
+.helpText {
+  display: block;
+  margin-top: 8px;
+}
+
+.statsCard {
+  margin-bottom: 24px;
+}
+

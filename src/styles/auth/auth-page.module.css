@@ -1,0 +1,179 @@
+.authContainer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+[data-theme="dark"] .authContainer {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.authCardWrapper {
+  max-width: 400px;
+  width: 100%;
+}
+
+.authCard {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: none;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.headerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.headerIcon > div {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+}
+
+.title {
+  margin: 0;
+  color: #1890ff;
+}
+
+[data-theme="dark"] .title {
+  color: #4dabf7;
+}
+
+.description {
+  display: block;
+  margin-top: 8px;
+}
+
+.errorAlert {
+  margin-bottom: 24px;
+}
+
+.successAlert {
+  margin-bottom: 24px;
+}
+
+.input {
+  border-radius: 6px;
+}
+
+.submitButton {
+  height: 48px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+}
+
+.linkContainer {
+  text-align: center;
+}
+
+.linkText {
+  font-size: 14px;
+}
+
+.link {
+  color: #1890ff;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+[data-theme="dark"] .link {
+  color: #4dabf7;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.infoBox {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f0f8ff;
+  border-radius: 6px;
+  border: 1px solid #91d5ff;
+}
+
+[data-theme="dark"] .infoBox {
+  background: rgba(24, 144, 255, 0.1);
+  border-color: rgba(24, 144, 255, 0.3);
+}
+
+.infoBoxSuccess {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f6ffed;
+  border-radius: 6px;
+  border: 1px solid #b7eb8f;
+  text-align: center;
+}
+
+[data-theme="dark"] .infoBoxSuccess {
+  background: rgba(82, 196, 26, 0.1);
+  border-color: rgba(82, 196, 26, 0.3);
+}
+
+.infoHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.infoTitle {
+  font-size: 12px;
+}
+
+.infoText {
+  font-size: 11px;
+  display: block;
+}
+
+.securityText {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.nameRow {
+  display: flex;
+  gap: 12px;
+}
+
+.registerCardWrapper {
+  max-width: 440px;
+  width: 100%;
+}
+
+.backButton {
+  color: white;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .backButton {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.backButton:hover {
+  color: rgba(255, 255, 255, 0.8) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+

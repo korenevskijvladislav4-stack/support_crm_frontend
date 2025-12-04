@@ -1,0 +1,65 @@
+.pageContainer {
+  padding: clamp(12px, 2vw, 24px);
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.headerContainer {
+  margin-bottom: 24px;
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.description {
+  display: block;
+  margin-top: 4px;
+}
+
+.groupListItem {
+  cursor: pointer;
+  padding: 16px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.groupListItem:hover {
+  border-color: #1890ff;
+  background: #f0f8ff;
+}
+
+.groupListItemSelected {
+  border: 2px solid #1890ff;
+  background: #f0f8ff;
+}
+
+.groupDetailsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.groupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.memberCard {
+  margin-bottom: 16px;
+}
+
