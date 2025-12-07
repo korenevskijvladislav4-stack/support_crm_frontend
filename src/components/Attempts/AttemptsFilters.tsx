@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { Card, Space, Button, Flex, Input, theme, DatePicker } from 'antd';
 import { SearchOutlined, ReloadOutlined, ClearOutlined, CheckOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
-import type { IAttemptsFilter } from '../../types/attempts.types';
+import type { IAttemptsFilter } from '../../types/attempt.types';
 import dayjs, { type Dayjs } from 'dayjs';
 
 interface AttemptsFiltersProps {

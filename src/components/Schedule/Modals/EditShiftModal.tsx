@@ -1,13 +1,12 @@
 import React from 'react';
-import { Modal, Form, Input, InputNumber } from 'antd';
-import dayjs from 'dayjs';
-import type { IShift } from '../../../types/shifts.types';
+import { Modal, Form, InputNumber } from 'antd';
+import type { IScheduleShift } from '../../../types/schedule.types';
 
 interface EditShiftModalProps {
   open: boolean;
   onCancel: () => void;
   onSubmit: (values: { duration: number }) => Promise<void>;
-  selectedShift: IShift | null;
+  selectedShift: IScheduleShift | null;
 }
 
 const EditShiftModal: React.FC<EditShiftModalProps> = ({
@@ -50,17 +49,11 @@ const EditShiftModal: React.FC<EditShiftModalProps> = ({
         layout="vertical"
         onFinish={handleFinish}
       >
-        <Form.Item label="Дата смены">
-          <Input 
-            value={selectedShift?.date ? dayjs(selectedShift.date).format('DD.MM.YYYY') : ''} 
-            disabled 
-          />
-        </Form.Item>
         <Form.Item
           name="duration"
-          label="Новая продолжительность смены (часов)"
+          label="Продолжительность смены (часов)"
           rules={[
-            { required: true, message: 'Укажите новую продолжительность смены' },
+            { required: true, message: 'Укажите продолжительность смены' },
             { type: 'number', min: 1, max: 24, message: 'Продолжительность должна быть от 1 до 24 часов' }
           ]}
         >

@@ -1,91 +1,117 @@
-import React from 'react';
-import { Card, Descriptions, Tag, Space } from 'antd';
-import { UserOutlined, TeamOutlined, CalendarOutlined, CheckCircleOutlined, MessageOutlined } from '@ant-design/icons';
+import { useMemo } from 'react';
+import { Card, Space, Typography, Row, Col, Flex, theme } from 'antd';
+import { 
+  UserOutlined, 
+  TeamOutlined, 
+  CalendarOutlined, 
+  CheckCircleOutlined,
+  TrophyOutlined
+} from '@ant-design/icons';
 import type { QualityMap } from '../../types/quality.types';
 import { formatDate } from '../../utils/dateUtils';
+
+const { Text } = Typography;
 
 interface QualityMapInfoProps {
   qualityMap: QualityMap;
   mode?: 'edit' | 'view';
 }
 
-const QualityMapInfo: React.FC<QualityMapInfoProps> = ({ qualityMap, mode = 'edit' }) => {
+function QualityMapInfo({ qualityMap }: QualityMapInfoProps) {
+  const { token } = theme.useToken();
+
+  // Расчёт среднего балла
+  const averageScore = useMemo(() => {
+    if (typeof qualityMap.score === 'number') {
+      return qualityMap.score;
+    }
+    return 0;
+  }, [qualityMap.score]);
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return '#52c41a';
+    if (score >= 70) return '#faad14';
+    return '#ff4d4f';
+  };
+
+  const infoItems = [
+    {
+      icon: <UserOutlined style={{ color: token.colorPrimary }} />,
+      label: 'Сотрудник',
+      value: `${qualityMap.user?.name || ''} ${qualityMap.user?.surname || ''}`.trim() || 'Не указан',
+    },
+    {
+      icon: <TeamOutlined style={{ color: token.colorPrimary }} />,
+      label: 'Команда',
+      value: qualityMap.team?.name || 'Не указана',
+    },
+    {
+      icon: <CalendarOutlined style={{ color: token.colorPrimary }} />,
+      label: 'Период',
+      value: `${formatDate(qualityMap.period.start)} — ${formatDate(qualityMap.period.end)}`,
+    },
+    {
+      icon: <CheckCircleOutlined style={{ color: token.colorPrimary }} />,
+      label: 'Проверяющий',
+      value: qualityMap.checker?.name || 'Не указан',
+    },
+  ];
 
   return (
     <Card 
-      title="Информация о карте качества"
-      style={{ marginBottom: 24 }}
+      size="small"
+      style={{ 
+        background: token.colorBgContainer,
+        border: `1px solid ${token.colorBorderSecondary}`,
+      }}
+      bodyStyle={{ padding: 16 }}
     >
-      <Descriptions 
-        bordered 
-        column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}
-        size="middle"
-      >
-        <Descriptions.Item 
-          label={
-            <Space>
-              <UserOutlined />
-              <span>Проверяемый сотрудник</span>
-            </Space>
-          }
-        >
-          {qualityMap.user?.name || 'Неизвестный'}
-          {qualityMap.user?.surname ? ` ${qualityMap.user.surname}` : ''}
-        </Descriptions.Item>
+      <Row gutter={[24, 16]} align="middle">
+        {/* Информация о карте */}
+        <Col xs={24} lg={18}>
+          <Flex gap={24} wrap="wrap">
+            {infoItems.map((item, index) => (
+              <Space key={index} size={8}>
+                {item.icon}
+                <div>
+                  <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>
+                    {item.label}
+                  </Text>
+                  <Text strong style={{ fontSize: 13 }}>
+                    {item.value}
+                  </Text>
+                </div>
+              </Space>
+            ))}
+          </Flex>
+        </Col>
 
-        <Descriptions.Item 
-          label={
-            <Space>
-              <TeamOutlined />
-              <span>Команда</span>
+        {/* Средний балл */}
+        <Col xs={24} lg={6}>
+          <Flex justify="flex-end">
+            <Space size={8} align="center">
+              <TrophyOutlined style={{ color: getScoreColor(averageScore), fontSize: 18 }} />
+              <div>
+                <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>
+                  Средний балл
+                </Text>
+                <Text 
+                  strong 
+                  style={{ 
+                    fontSize: 20, 
+                    fontWeight: 700,
+                    color: getScoreColor(averageScore)
+                  }}
+                >
+                  {averageScore}%
+                </Text>
+              </div>
             </Space>
-          }
-        >
-          {qualityMap.team?.name || 'Неизвестная'}
-        </Descriptions.Item>
-
-        <Descriptions.Item 
-          label={
-            <Space>
-              <CalendarOutlined />
-              <span>Период проверки</span>
-            </Space>
-          }
-        >
-          {formatDate(qualityMap.start_date)} - {formatDate(qualityMap.end_date)}
-        </Descriptions.Item>
-
-        <Descriptions.Item 
-          label={
-            <Space>
-              <CheckCircleOutlined />
-              <span>Проверяющий</span>
-            </Space>
-          }
-        >
-          {qualityMap.checker?.name || 'Неизвестный'}
-        </Descriptions.Item>
-
-        <Descriptions.Item 
-          label={
-            <Space>
-              <MessageOutlined />
-              <span>Чатов для проверки</span>
-            </Space>
-          }
-        >
-          <Tag color="blue">{qualityMap.chat_ids?.length || 0}/15</Tag>
-        </Descriptions.Item>
-
-        <Descriptions.Item label="Статус">
-          <Tag color={mode === 'edit' ? 'processing' : 'success'}>
-            {mode === 'edit' ? 'Редактирование' : 'Просмотр'}
-          </Tag>
-        </Descriptions.Item>
-      </Descriptions>
+          </Flex>
+        </Col>
+      </Row>
     </Card>
   );
-};
+}
 
 export default QualityMapInfo;
-

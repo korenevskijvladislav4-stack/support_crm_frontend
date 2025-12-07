@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo, useEffect, type FC } from "react";
-import type { IAttempt, IAttemptsFilter } from "../../types/attempts.types";
+import { useCallback, useMemo, useEffect, type FC } from "react";
+import type { IAttempt, IAttemptsFilter } from "../../types/attempt.types";
 import { 
   Table,
   Button, 
@@ -17,6 +17,9 @@ import {
 import { useLazyAllAttemptsQuery, useDestroyAttemptMutation } from "../../api/attemptsApi";
 import { Link } from "react-router-dom";
 import { AttemptsPageHeader, AttemptsFilters } from "../../components/Attempts";
+import { usePermissions } from "../../hooks/usePermissions";
+import { useUrlFilters } from "../../hooks/useUrlFilters";
+import { PERMISSIONS } from "../../constants/permissions";
 import styles from "../../styles/users/users-page.module.css";
 import {
   DeleteOutlined,
@@ -24,7 +27,6 @@ import {
   UserOutlined,
   MailOutlined,
   CalendarOutlined,
-  ClockCircleOutlined,
   ExclamationCircleOutlined,
   PhoneOutlined,
   CheckCircleOutlined,
@@ -37,17 +39,41 @@ const { Text } = Typography;
 
 type AttemptTab = 'all' | 'viewed' | 'not_viewed';
 
+// Дефолтные значения фильтров
+const defaultFilters = {
+  search: undefined as string | undefined,
+  email: undefined as string | undefined,
+  phone: undefined as string | undefined,
+  created_at: undefined as string | undefined,
+  tab: 'all' as AttemptTab,
+  page: 1,
+  per_page: 10,
+};
+
+// Парсеры для URL фильтров (статичные)
+const attemptFilterParsers = {
+  page: (val: string) => Number(val) || 1,
+  per_page: (val: string) => Number(val) || 10,
+  tab: (val: string) => (val || 'all') as AttemptTab,
+};
+
 const AttemptsListPage: FC = () => {
   const { token } = theme.useToken();
-  const [activeTab, setActiveTab] = useState<AttemptTab>('all');
-  const [filters, setFilters] = useState<IAttemptsFilter>({
-    search: undefined,
-    email: undefined,
-    phone: undefined,
-    created_at: undefined,
-    page: 1,
-    per_page: 10,
+  const { hasPermission } = usePermissions();
+  
+  // Permissions
+  const canApprove = hasPermission(PERMISSIONS.ATTEMPTS_APPROVE);
+  const canDelete = hasPermission(PERMISSIONS.ATTEMPTS_DELETE);
+
+  // Фильтры с сохранением в URL
+  const { filters: urlFilters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters({
+    defaults: defaultFilters,
+    parsers: attemptFilterParsers,
   });
+
+  const activeTab = urlFilters.tab;
+  const filters: IAttemptsFilter = urlFilters;
+
   const [trigger, { data: attemptsResponse, isLoading, isFetching }] = useLazyAllAttemptsQuery();
   const [destroyAttempt, { isLoading: destroyLoading }] = useDestroyAttemptMutation();
 
@@ -62,37 +88,20 @@ const AttemptsListPage: FC = () => {
 
   const handleTabChange = useCallback((key: string) => {
     const newTab = key as AttemptTab;
-    setActiveTab(newTab);
-    setFilters(prev => ({ ...prev, page: 1 }));
-  }, []);
+    setFilters({ tab: newTab, page: 1 });
+  }, [setFilters]);
 
   const handleApplyFilters = useCallback((newFilters: IAttemptsFilter) => {
-    setFilters(prev => ({
-      ...prev,
-      ...newFilters,
-      page: 1,
-    }));
-  }, []);
+    setFilters({ ...newFilters, page: 1 });
+  }, [setFilters]);
 
   const handleResetFilters = useCallback(() => {
-    const resetFilters: IAttemptsFilter = {
-      search: undefined,
-      email: undefined,
-      phone: undefined,
-      created_at: undefined,
-      page: 1,
-      per_page: filters.per_page || 10,
-    };
-    setFilters(resetFilters);
-  }, [filters.per_page]);
+    resetUrlFilters();
+  }, [resetUrlFilters]);
 
   const handleTableChange = useCallback((pagination: { current: number; pageSize: number }) => {
-    setFilters(prev => ({
-      ...prev,
-      page: pagination.current,
-      per_page: pagination.pageSize,
-    }));
-  }, []);
+    setFilters({ page: pagination.current, per_page: pagination.pageSize });
+  }, [setFilters]);
 
   const hasActiveFilters = useMemo((): boolean => {
     return !!(
@@ -116,16 +125,6 @@ const AttemptsListPage: FC = () => {
       console.error('Error deleting attempt:', error);
     }
   }, [destroyAttempt, trigger, filtersWithStatus]);
-
-  const getStatus = useCallback((createdAt: Date) => {
-    const created = new Date(createdAt);
-    const now = new Date();
-    const diffHours = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
-    
-    if (diffHours < 1) return { status: 'success', text: 'Новая', color: 'green' };
-    if (diffHours < 24) return { status: 'processing', text: 'В ожидании', color: 'blue' };
-    return { status: 'default', text: 'Просрочена', color: 'red' };
-  }, []);
 
   const columns: TableColumnsType<IAttempt> = useMemo(() => [
     {
@@ -207,40 +206,17 @@ const AttemptsListPage: FC = () => {
       align: 'center',
       width: 120,
       render: (_, record) => {
-        const status = getStatus(record.created_at);
+        const statusText = record.is_viewed ? 'Просмотрено' : 'Не просмотрено';
+        const statusColor = record.is_viewed ? 'success' : 'warning';
         return (
           <Badge 
-            status={status.status as 'success' | 'processing' | 'default'} 
+            status={statusColor as 'success' | 'warning' | 'default'} 
             text={
-              <Text style={{ fontSize: 12, color: status.color }}>
-                {status.text}
+              <Text style={{ fontSize: 12 }}>
+                {statusText}
               </Text>
             } 
           />
-        );
-      }
-    },
-    {
-      title: 'Время ожидания',
-      align: 'center',
-      width: 130,
-      render: (_, record) => {
-        const created = new Date(record.created_at);
-        const now = new Date();
-        const diffHours = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60));
-        
-        return (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
-              <ClockCircleOutlined style={{ color: diffHours > 24 ? token.colorError : token.colorSuccess, fontSize: 14 }} />
-              <Text strong style={{ fontSize: 13 }}>
-                {diffHours} ч
-              </Text>
-            </div>
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              с момента подачи
-            </Text>
-          </div>
         );
       }
     },
@@ -250,62 +226,70 @@ const AttemptsListPage: FC = () => {
       fixed: 'right',
       width: 120,
       render: (_, record) => (
-        <Space size="small">
-          <Tooltip 
-            title="Просмотр заявки"
-            overlayInnerStyle={{
-              backgroundColor: token.colorBgElevated,
-              color: token.colorText,
-              border: `1px solid ${token.colorBorder}`
-            }}
-          >
-            <Link to={`/attempts/${record.id}`}>
-              <Button 
-                type="text" 
-                size="small" 
-                icon={<EyeOutlined />}
-                style={{ color: '#1890ff' }}
-              />
-            </Link>
-          </Tooltip>
-          
-          <Tooltip 
-            title="Отклонить заявку"
-            overlayInnerStyle={{
-              backgroundColor: token.colorBgElevated,
-              color: token.colorText,
-              border: `1px solid ${token.colorBorder}`
-            }}
-          >
-            <Popconfirm
-              title="Отклонение заявки"
-              description={
-                <div>
-                  <div>Вы уверены, что хотите отклонить заявку от <Text strong>"{record.name} {record.surname}"</Text>?</div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Это действие нельзя отменить
-                  </Text>
-                </div>
-              }
-              icon={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
-              onConfirm={() => handleDeleteAttempt(record.id)}
-              okText="Да, отклонить"
-              cancelText="Отмена"
-              okType="danger"
-            >
-              <Button 
-                type="text" 
-                size="small" 
-                danger
-                icon={<DeleteOutlined />}
-                loading={destroyLoading}
-              />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
+        record.is_viewed ? (
+          <Text type="secondary" style={{ fontSize: 12 }}>Действия недоступны</Text>
+        ) : (
+          <Space size="small">
+            {canApprove && (
+              <Tooltip 
+                title="Просмотр заявки"
+                overlayInnerStyle={{
+                  backgroundColor: token.colorBgElevated,
+                  color: token.colorText,
+                  border: `1px solid ${token.colorBorder}`
+                }}
+              >
+                <Link to={`/attempts/${record.id}`}>
+                  <Button 
+                    type="text" 
+                    size="small" 
+                    icon={<EyeOutlined />}
+                    style={{ color: '#1890ff' }}
+                  />
+                </Link>
+              </Tooltip>
+            )}
+            
+            {canDelete && (
+              <Tooltip 
+                title="Отклонить заявку"
+                overlayInnerStyle={{
+                  backgroundColor: token.colorBgElevated,
+                  color: token.colorText,
+                  border: `1px solid ${token.colorBorder}`
+                }}
+              >
+                <Popconfirm
+                  title="Отклонение заявки"
+                  description={
+                    <div>
+                      <div>Вы уверены, что хотите отклонить заявку от <Text strong>"{record.name} {record.surname}"</Text>?</div>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        Это действие нельзя отменить
+                      </Text>
+                    </div>
+                  }
+                  icon={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
+                  onConfirm={() => handleDeleteAttempt(record.id)}
+                  okText="Да, отклонить"
+                  cancelText="Отмена"
+                  okType="danger"
+                >
+                  <Button 
+                    type="text" 
+                    size="small" 
+                    danger
+                    icon={<DeleteOutlined />}
+                    loading={destroyLoading}
+                  />
+                </Popconfirm>
+              </Tooltip>
+            )}
+          </Space>
+        )
       )
     }
-  ], [getStatus, handleDeleteAttempt, destroyLoading, token]);
+  ], [handleDeleteAttempt, destroyLoading, token, canApprove, canDelete]);
 
   const tabItems = useMemo(() => [
     {
@@ -397,7 +381,6 @@ const AttemptsListPage: FC = () => {
           rowKey="id"
           loading={isLoading || destroyLoading || isFetching}
           scroll={{ x: 'max-content' }}
-          bordered
           pagination={{
             current: paginationMeta?.current_page || 1,
             pageSize: paginationMeta?.per_page || 10,

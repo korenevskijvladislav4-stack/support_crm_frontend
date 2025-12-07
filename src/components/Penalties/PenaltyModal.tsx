@@ -1,7 +1,8 @@
 import React from 'react';
-import { Modal, Form, Select, InputNumber, Input } from 'antd';
+import { Modal, Form, Select, InputNumber, Input, DatePicker } from 'antd';
 import type { IPenalty, IPenaltyForm } from '../../types/penalty.types';
 import type { IUser } from '../../types/user.types';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -45,7 +46,7 @@ const PenaltyModal: React.FC<PenaltyModalProps> = ({
       >
         <Form.Item
           name="user_id"
-          label="Пользователь-нарушитель"
+          label="Пользователь"
           rules={[{ required: true, message: 'Выберите пользователя' }]}
         >
           <Select
@@ -60,6 +61,37 @@ const PenaltyModal: React.FC<PenaltyModalProps> = ({
               </Option>
             ))}
           </Select>
+        </Form.Item>
+
+        <Form.Item
+          name="chat_id"
+          label="ID чата"
+          rules={[
+            { required: true, message: 'Введите ID чата' },
+            { max: 100, message: 'Максимум 100 символов' }
+          ]}
+        >
+          <Input
+            placeholder="Введите ID чата, в котором обнаружено нарушение"
+            maxLength={100}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="violation_date"
+          label="Дата нарушения"
+          rules={[{ required: true, message: 'Выберите дату нарушения' }]}
+          getValueProps={(value) => ({
+            value: value ? dayjs(value) : null,
+          })}
+          getValueFromEvent={(date) => date?.format('YYYY-MM-DD')}
+        >
+          <DatePicker
+            style={{ width: '100%' }}
+            format="DD.MM.YYYY"
+            placeholder="Выберите дату нарушения"
+            disabledDate={(current) => current && current > dayjs().endOf('day')}
+          />
         </Form.Item>
 
         <Form.Item

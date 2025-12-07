@@ -1,68 +1,85 @@
 import React from 'react';
-import { Card, Typography, Space, Button, Breadcrumb } from 'antd';
-import { FileTextOutlined, ArrowLeftOutlined, EyeOutlined, HomeOutlined } from '@ant-design/icons';
+import { Typography, Space, Button, Tag, Breadcrumb, theme } from 'antd';
+import { 
+  ArrowLeftOutlined, 
+  EyeOutlined, 
+  EditOutlined,
+  HomeOutlined,
+  LineChartOutlined
+} from '@ant-design/icons';
 import type { QualityMap } from '../../types/quality.types';
-import { formatDateTime } from '../../utils/dateUtils';
+import styles from '../../styles/users/users-page.module.css';
 
 const { Title, Text } = Typography;
 
 interface QualityMapHeaderProps {
   qualityMap: QualityMap;
+  mode: 'edit' | 'view';
   onBack: () => void;
-  onViewMode: () => void;
+  onToggleMode: () => void;
 }
 
-const QualityMapHeader: React.FC<QualityMapHeaderProps> = ({ qualityMap, onBack, onViewMode }) => {
-  return (
-    <Card style={{ marginBottom: 24 }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
-        {/* Breadcrumbs */}
-        <Breadcrumb
-          items={[
-            { title: <HomeOutlined />, href: '/quality' },
-            { title: 'Карты качества', href: '/quality' },
-            { title: `Карта #${qualityMap.id}` },
-          ]}
-        />
+const QualityMapHeader: React.FC<QualityMapHeaderProps> = ({ 
+  qualityMap, 
+  mode,
+  onBack, 
+  onToggleMode 
+}) => {
+  const { token } = theme.useToken();
+  const isEditMode = mode === 'edit';
 
-        {/* Заголовок и кнопки */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-          <Space direction="vertical" size="small" style={{ flex: 1, minWidth: 300 }}>
-            <Title level={2} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <FileTextOutlined style={{ color: '#1890ff', fontSize: 28 }} />
-              Редактирование карты качества
+  return (
+    <div className={styles.headerContainer} style={{ marginBottom: 16 }}>
+      {/* Breadcrumbs */}
+      <Breadcrumb
+        style={{ marginBottom: 12 }}
+        items={[
+          { title: <><HomeOutlined /> Главная</>, href: '/' },
+          { title: 'Карты качества', href: '/quality' },
+          { title: `Карта #${qualityMap.id}` },
+        ]}
+      />
+
+      <div className={styles.headerContent}>
+        <div className={styles.headerTitleSection}>
+          <Space align="center" size={12}>
+            <Title 
+              level={3} 
+              className={styles.title}
+              style={{ color: token.colorText, marginBottom: 0 }}
+            >
+              <LineChartOutlined style={{ color: token.colorPrimary }} />
+              {isEditMode ? 'Редактирование карты качества' : 'Просмотр карты качества'}
             </Title>
-            <Space size="middle" split={<span style={{ color: '#d9d9d9' }}>|</span>}>
-              <Text type="secondary">
-                <strong>ID:</strong> {qualityMap.id}
-              </Text>
-              <Text type="secondary">
-                <strong>Создана:</strong> {formatDateTime(qualityMap.created_at)}
-              </Text>
-            </Space>
+            <Tag color={isEditMode ? 'processing' : 'success'}>
+              {isEditMode ? 'Редактирование' : 'Просмотр'}
+            </Tag>
           </Space>
-          
-          <Space size="middle" wrap>
-            <Button 
-              icon={<EyeOutlined />} 
-              onClick={onViewMode}
-              size="large"
-            >
-              Режим просмотра
-            </Button>
-            <Button 
-              icon={<ArrowLeftOutlined />} 
-              onClick={onBack}
-              size="large"
-            >
-              Назад к списку
-            </Button>
-          </Space>
+          <Text type="secondary" className={styles.description} style={{ fontSize: 12 }}>
+            {qualityMap.user?.name} {qualityMap.user?.surname} • {qualityMap.team?.name}
+          </Text>
         </div>
-      </Space>
-    </Card>
+        
+        <Space size="middle" wrap>
+          <Button 
+            icon={isEditMode ? <EyeOutlined /> : <EditOutlined />}
+            type={isEditMode ? 'default' : 'primary'}
+            onClick={onToggleMode}
+            size="middle"
+          >
+            {isEditMode ? 'Просмотр' : 'Редактировать'}
+          </Button>
+          <Button 
+            icon={<ArrowLeftOutlined />} 
+            onClick={onBack}
+            size="middle"
+          >
+            К списку
+          </Button>
+        </Space>
+      </div>
+    </div>
   );
 };
 
 export default QualityMapHeader;
-

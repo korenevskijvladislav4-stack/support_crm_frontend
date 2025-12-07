@@ -1,7 +1,7 @@
 // app/api/authApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithReauth } from './baseQueries/baseQueryWithReauth';
-import type { IScheduleType } from '../types/schedule-type.types';
+import type { IScheduleType } from '../types/schedule.types';
 
 export const scheduleTypesApi = createApi({
     reducerPath: 'scheduleTypesApi',

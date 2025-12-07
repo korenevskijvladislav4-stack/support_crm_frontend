@@ -15,13 +15,15 @@ interface PenaltiesPageHeaderProps {
   onRefetch?: () => void;
   hasActiveFilters: boolean;
   onCreateClick: () => void;
+  canCreate?: boolean;
 }
 
 const PenaltiesPageHeader: React.FC<PenaltiesPageHeaderProps> = ({
   onResetFilters,
   onRefetch,
   hasActiveFilters,
-  onCreateClick
+  onCreateClick,
+  canCreate = false
 }) => {
   const { token } = theme.useToken();
 
@@ -60,14 +62,16 @@ const PenaltiesPageHeader: React.FC<PenaltiesPageHeaderProps> = ({
               Обновить
             </Button>
           )}
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
-            onClick={onCreateClick}
-            size="middle"
-          >
-            Создать штраф
-          </Button>
+          {canCreate && (
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={onCreateClick}
+              size="middle"
+            >
+              Создать штраф
+            </Button>
+          )}
         </Space>
       </div>
     </div>
@@ -75,4 +79,3 @@ const PenaltiesPageHeader: React.FC<PenaltiesPageHeaderProps> = ({
 };
 
 export default PenaltiesPageHeader;
-

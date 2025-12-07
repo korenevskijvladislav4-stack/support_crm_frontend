@@ -28,8 +28,8 @@ import {
   CloseCircleOutlined,
   FolderOutlined
 } from '@ant-design/icons';
-import { useGetCriteriaQuery, useCreateCallDeductionMutation, useUpdateQualityMapCallIdsMutation } from '../../api/qualityApi';
-import type { QualityMap, QualityCriterion, QualityCallDeduction } from '../../types/quality.types';
+import { useCreateCallDeductionMutation, useUpdateQualityMapCallIdsMutation } from '../../api/qualityApi';
+import type { QualityMap, QualityCallDeduction, IQualityMapCriterion } from '../../types/quality.types';
 import DeductionModal from './DeductionModal';
 import EditCallModal from './EditCallModal';
 
@@ -37,6 +37,7 @@ const { Text } = Typography;
 
 interface QualityCallsTableProps {
   qualityMap: QualityMap;
+  readOnly?: boolean;
 }
 
 interface SelectedCell {
@@ -68,13 +69,10 @@ interface QualityCallsTableRow {
   [key: string]: unknown;
 }
 
-const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => {
+const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap, readOnly = false }) => {
   const { token } = theme.useToken();
   const isDark = token.colorBgBase === '#0d1117';
-  const { data: allCriteria = [] } = useGetCriteriaQuery(
-    { team_id: qualityMap.team_id },
-    { skip: !qualityMap?.team_id }
-  );
+  const allCriteria = useMemo<IQualityMapCriterion[]>(() => qualityMap.criteria || [], [qualityMap.criteria]);
   const [createCallDeduction, { isLoading: isCreatingDeduction }] = useCreateCallDeductionMutation();
   const [updateCallIds, { isLoading: isUpdatingCalls }] = useUpdateQualityMapCallIdsMutation();
   
@@ -88,7 +86,8 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
   const [editCallForm] = Form.useForm<EditCallModalValues>();
 
   // Инициализируем звонки если их нет
-  const callIds = qualityMap?.call_ids || Array(qualityMap?.calls_count || 0).fill('');
+  const callsTotal = qualityMap?.progress?.calls.total || (qualityMap?.call_ids?.length ?? 0);
+  const callIds = qualityMap?.call_ids || Array(callsTotal).fill('');
 
   // Группируем снятия по критериям и звонкам для быстрого доступа
   const callDeductionsMap = useMemo(() => {
@@ -116,9 +115,9 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
 
   // Группируем критерии по категориям
   const groupedCriteria = useMemo(() => {
-    const groups = new Map<string, QualityCriterion[]>();
+    const groups = new Map<string, IQualityMapCriterion[]>();
     
-    filteredCriteria.forEach((criterion: QualityCriterion) => {
+    filteredCriteria.forEach((criterion: IQualityMapCriterion) => {
       const categoryKey = criterion.category?.id?.toString() || 'no_category';
       
       if (!groups.has(categoryKey)) {
@@ -142,7 +141,8 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
       
       let totalDeduction = 0;
       allCriteria.forEach(criterion => {
-        const deductionKey = `${criterion.id}_${callId}`;
+        const criterionKey = criterion.criteria_id ?? criterion.id;
+        const deductionKey = `${criterionKey}_${callId}`;
         const deduction = callDeductionsMap.get(deductionKey);
         if (deduction && typeof deduction.deduction === 'number') {
           totalDeduction += deduction.deduction;
@@ -373,145 +373,59 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
       },
     },
     ...callIds.map((callId, callIndex) => {
-      const callStats = callTotals[callIndex];
-      const deductionsForCall = qualityMap.call_deductions?.filter(d => d.call_id === callId) || [];
-      const commentsCount = deductionsForCall.filter(d => d.comment).length;
-      const totalDeductions = deductionsForCall.reduce((sum, d) => 
-        sum + (typeof d.deduction === 'number' ? d.deduction : 0), 0
-      );
 
       return {
         title: (
-          <Popover
-            content={
-              <div style={{ maxWidth: 280 }}>
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ 
-                    fontWeight: 600, 
-                    fontSize: '14px',
-                    color: token.colorTextHeading,
-                    marginBottom: 8
-                  }}>
-                    Звонок {callIndex + 1}
-                  </div>
-                  <div style={{ 
-                    fontSize: '12px',
-                    color: token.colorTextSecondary,
-                    marginBottom: 4
-                  }}>
-                    ID: <Text strong style={{ color: token.colorText }}>{callId || 'не указан'}</Text>
-                  </div>
-                </div>
-                
-                {callId && callStats && (
-                  <div style={{ 
-                    padding: '8px 12px',
-                    backgroundColor: isDark ? token.colorFillTertiary : token.colorFillQuaternary,
-                    borderRadius: 6,
-                    marginBottom: 8
-                  }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 6
-                    }}>
-                      <span style={{ fontSize: '12px', color: token.colorTextSecondary }}>Оценка:</span>
-                      <Text strong style={{ 
-                        fontSize: '16px',
-                        color: getScoreColor(callStats.score)
-                      }}>
-                        {callStats.score}%
-                      </Text>
-                    </div>
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 4
-                    }}>
-                      <span style={{ fontSize: '12px', color: token.colorTextSecondary }}>Снято баллов:</span>
-                      <Text style={{ fontSize: '13px', color: token.colorText }}>
-                        {totalDeductions}
-                      </Text>
-                    </div>
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <span style={{ fontSize: '12px', color: token.colorTextSecondary }}>Комментариев:</span>
-                      <Text style={{ fontSize: '13px', color: token.colorText }}>
-                        {commentsCount}
-                      </Text>
-                    </div>
-                  </div>
-                )}
-
-                {!callId && (
-                  <div style={{ 
-                    fontSize: '12px',
-                    color: token.colorTextSecondary,
-                    fontStyle: 'italic'
-                  }}>
-                    ID звонка не указан
-                  </div>
-                )}
-              </div>
-            }
-            title="Обзор звонка"
-            trigger="hover"
-            placement="top"
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '2px 4px',
+            minHeight: 28,
+            backgroundColor: callId 
+              ? (isDark ? '#162312' : '#f6ffed')
+              : (isDark ? '#3d2816' : '#fff2f0'),
+            borderRadius: 4,
+            border: `1px solid ${callId 
+              ? (isDark ? '#3f6600' : '#b7eb8f')
+              : (isDark ? '#8b4513' : '#ffa39e')}`,
+            cursor: readOnly ? 'default' : 'pointer'
+          }}
+          onClick={readOnly ? undefined : () => handleEditCall(callIndex)}
           >
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between', 
-              padding: '2px 4px',
-              minHeight: 28,
-              backgroundColor: callId 
-                ? (isDark ? '#162312' : '#f6ffed')
-                : (isDark ? '#3d2816' : '#fff2f0'),
-              borderRadius: 4,
-              border: `1px solid ${callId 
-                ? (isDark ? '#3f6600' : '#b7eb8f')
-                : (isDark ? '#8b4513' : '#ffa39e')}`,
-              cursor: 'pointer'
-            }}
-            onClick={() => handleEditCall(callIndex)}
+            <div 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 4, 
+                flex: 1,
+                minWidth: 0,
+              }}
             >
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 4, 
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <PhoneOutlined style={{ 
-                  fontSize: 10, 
-                  color: callId ? (isDark ? '#73d13d' : '#52c41a') : (isDark ? '#ffa940' : '#ff4d4f')
-                }} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <Text 
-                    strong={!!callId}
-                    type={callId ? undefined : "secondary"}
-                    style={{ 
-                      fontSize: '10px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'block',
-                      color: callId 
-                        ? (isDark ? '#73d13d' : '#389e0d')
-                        : (isDark ? '#ffa940' : '#cf1322')
-                    }}
-                  >
-                    {callId || `Звонок ${callIndex + 1}`}
-                  </Text>
-                </div>
+              <PhoneOutlined style={{ 
+                fontSize: 10, 
+                color: callId ? (isDark ? '#73d13d' : '#52c41a') : (isDark ? '#ffa940' : '#ff4d4f')
+              }} />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <Text 
+                  strong={!!callId}
+                  type={callId ? undefined : "secondary"}
+                  style={{ 
+                    fontSize: '10px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    display: 'block',
+                    color: callId 
+                      ? (isDark ? '#73d13d' : '#389e0d')
+                      : (isDark ? '#ffa940' : '#cf1322')
+                  }}
+                >
+                  {callId || `Звонок ${callIndex + 1}`}
+                </Text>
               </div>
+            </div>
+            {!readOnly && (
               <Dropdown 
                 menu={{ items: getColumnTitleDropdownItems(callIndex) }} 
                 trigger={['click']}
@@ -532,13 +446,13 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
                   }}
                 />
               </Dropdown>
-            </div>
-          </Popover>
+            )}
+          </div>
         ),
         dataIndex: `call_${callIndex}`,
         key: `call_${callIndex}`,
-        width: 80,
-        minWidth: 80,
+        width: 150,
+        minWidth: 150,
         align: 'center' as const,
         render: (_: unknown, record: QualityCallsTableRow) => {
           const currentCallId = callIds[callIndex];
@@ -559,78 +473,28 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
             }
 
             const totalScore = callTotals[callIndex]?.score;
-            const totalDeduction = callTotals[callIndex]?.deduction || 0;
             
             return (
-              <Popover
-                content={
-                  <div style={{ maxWidth: 250 }}>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text strong style={{ fontSize: '14px', color: token.colorText }}>
-                        Итоговая оценка
-                      </Text>
-                    </div>
-                    <div style={{ 
-                      padding: '8px 12px',
-                      backgroundColor: isDark ? token.colorFillTertiary : token.colorFillQuaternary,
-                      borderRadius: 6,
-                      marginBottom: 8
-                    }}>
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: 6
-                      }}>
-                        <span style={{ fontSize: '12px', color: token.colorTextSecondary }}>Оценка:</span>
-                        <Text strong style={{ 
-                          fontSize: '18px',
-                          color: getScoreColor(totalScore)
-                        }}>
-                          {totalScore}%
-                        </Text>
-                      </div>
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <span style={{ fontSize: '12px', color: token.colorTextSecondary }}>Снято баллов:</span>
-                        <Text style={{ fontSize: '13px', color: token.colorError }}>
-                          {totalDeduction}
-                        </Text>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '11px', color: token.colorTextSecondary, fontStyle: 'italic' }}>
-                      Максимальная оценка: 100%
-                    </div>
-                  </div>
-                }
-                title="Детали итоговой оценки"
-                trigger="hover"
-                placement="top"
-              >
+              <div style={{ 
+                padding: '4px 2px',
+                backgroundColor: token.colorBgContainer,
+                borderRadius: '4px',
+                border: `1px solid ${getScoreColor(totalScore)}`,
+                margin: '0 1px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
                 <div style={{ 
-                  padding: '4px 2px',
-                  backgroundColor: token.colorBgContainer,
-                  borderRadius: '4px',
-                  border: `1px solid ${getScoreColor(totalScore)}`,
-                  margin: '0 1px',
-                  height: '28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  fontSize: '12px', 
+                  fontWeight: 'bold',
+                  color: getScoreColor(totalScore),
+                  textAlign: 'center'
                 }}>
-                  <div style={{ 
-                    fontSize: '12px', 
-                    fontWeight: 'bold',
-                    color: getScoreColor(totalScore),
-                    textAlign: 'center'
-                  }}>
-                    {totalScore}%
-                  </div>
+                  {totalScore}%
                 </div>
-              </Popover>
+              </div>
             );
           }
 
@@ -649,11 +513,11 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer'
+                  cursor: readOnly ? 'default' : 'pointer'
                 }}
-                onClick={() => handleEditCall(callIndex)}
+                onClick={readOnly ? undefined : () => handleEditCall(callIndex)}
               >
-                <EditOutlined style={{ fontSize: 10 }} />
+                {readOnly ? '—' : <EditOutlined style={{ fontSize: 10 }} />}
               </div>
             );
           }
@@ -674,11 +538,11 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer'
+                  cursor: readOnly ? 'default' : 'pointer'
                 }}
-                onClick={() => handleEditCall(callIndex)}
+                onClick={readOnly ? undefined : () => handleEditCall(callIndex)}
               >
-                <EditOutlined style={{ fontSize: 10 }} />
+                {readOnly ? '—' : <EditOutlined style={{ fontSize: 10 }} />}
               </div>
             );
           }
@@ -704,9 +568,9 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
-                cursor: 'pointer',
+                cursor: readOnly ? 'default' : 'pointer',
               }}
-              onClick={() => id && handleCellClick(id, callIndex, deduction)}
+              onClick={readOnly ? undefined : () => id && handleCellClick(id, callIndex, deduction)}
             >
               <div style={{ 
                 fontSize: '11px', 
@@ -786,18 +650,18 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
       const categoryName = firstCriterion.category?.name || 'Без категории';
 
       // Добавляем критерии этой категории с информацией о категории
-      criteria.forEach((criterion: QualityCriterion, criterionIndex) => {
+      criteria.forEach((criterion: IQualityMapCriterion, criterionIndex) => {
         const isFirstInCategory = criterionIndex === 0;
         const isLastInCategory = criterionIndex === criteria.length - 1;
         const isLastCategory = categoryIndex === sortedCategories.length - 1;
         
         rows.push({
           key: `criteria_${criterion.id}`,
-          id: criterion.id,
+          id: criterion.criteria_id ?? criterion.id,
           name: criterion.name || 'Неизвестный критерий',
           description: criterion.description ?? undefined,
           isTotal: false,
-          categoryId: criterion.category_id ?? null,
+          categoryId: criterion.category?.id ?? null,
           categoryName: categoryName,
           isFirstInCategory,
           isLastInCategory,
@@ -885,7 +749,7 @@ const QualityCallsTable: React.FC<QualityCallsTableProps> = ({ qualityMap }) => 
     return criterion?.name || 'Неизвестный критерий';
   };
 
-  if (!qualityMap || !qualityMap.calls_count || qualityMap.calls_count === 0) {
+  if (!qualityMap || callsTotal === 0) {
     return null;
   }
 

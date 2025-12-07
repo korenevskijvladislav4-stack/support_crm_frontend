@@ -1,7 +1,8 @@
 import React from 'react';
 import { Card, Descriptions, Avatar, Space, Tag, Typography, Statistic, Alert } from 'antd';
 import { FileTextOutlined, TeamOutlined, UserOutlined, CalendarOutlined, MessageOutlined, SafetyCertificateOutlined, StarOutlined, FolderOutlined } from '@ant-design/icons';
-import type { Team, User, QualityCriterion } from '../../types/quality.types';
+import type { Team, User } from '../../types/quality.types';
+import type { IQualityCriteria } from '../../types/quality-criteria.types';
 import dayjs from 'dayjs';
 import styles from '../../styles/quality/create-quality-map.module.css';
 
@@ -16,7 +17,7 @@ interface QualityMapPreviewProps {
     calls_count?: number;
   };
   selectedTeam: number | null;
-  teamCriteria: QualityCriterion[];
+  teamCriteria: IQualityCriteria[];
 }
 
 const QualityMapPreview: React.FC<QualityMapPreviewProps> = ({

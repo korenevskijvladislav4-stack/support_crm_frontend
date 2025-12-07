@@ -5,18 +5,24 @@ import {
   Typography, 
   Steps,
   Button,
-  Space
+  Space,
+  Progress,
+  Result,
+  message
 } from "antd";
-import { useState, type FC } from "react";
-import { type FormFieldValue, type IScheduleForm } from "../../types/schedule.types";
+import { useState, useEffect, useCallback, type FC } from "react";
+import type { FormFieldValue, IScheduleForm, IScheduleGenerationStatus } from "../../types/schedule.types";
 import { useGetAllTeamsQuery } from "../../api/teamsApi";
-import { useCreateScheduleMutation } from "../../api/scheduleApi";
+import { useCreateScheduleMutation, useLazyGetGenerationStatusQuery, scheduleApi } from "../../api/scheduleApi";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { CreateScheduleForm } from "../../components/Schedule";
 import {
   CalendarOutlined,
   CheckCircleOutlined,
-  ArrowLeftOutlined
+  ArrowLeftOutlined,
+  LoadingOutlined,
+  CloseCircleOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -24,32 +30,104 @@ const { Step } = Steps;
 
 const CreateSchedulePage: FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [createSchedule, { isLoading: isCreating }] = useCreateScheduleMutation();
+  const [getGenerationStatus] = useLazyGetGenerationStatusQuery();
   const [currentStep, setCurrentStep] = useState(0);
+  const [generationId, setGenerationId] = useState<number | null>(null);
+  const [generationStatus, setGenerationStatus] = useState<IScheduleGenerationStatus | null>(null);
   
   const [createScheduleForm, setCreateScheduleForm] = useState<IScheduleForm>({
-    team_id: null,
+    team_id: null as unknown as number,
     top_start: '',
     bottom_start: ''
   });
 
-  const { data: teams, isLoading: isTeamsLoading } = useGetAllTeamsQuery();
+  const { data: teamsData, isLoading: isTeamsLoading } = useGetAllTeamsQuery();
+  
+  // Нормализуем teams
+  const teams = Array.isArray(teamsData) ? teamsData : [];
 
-  const onSubmitHandler = async () => {
+  // Функция для перехода к графику с нужными параметрами
+  const navigateToSchedule = useCallback(() => {
+    const params = new URLSearchParams();
+    
+    // Добавляем team_id
+    if (createScheduleForm.team_id) {
+      params.set('team_id', String(createScheduleForm.team_id));
+    }
+    
+    // Извлекаем месяц из даты начала (YYYY-MM-DD -> YYYY-MM)
+    if (createScheduleForm.top_start) {
+      const month = createScheduleForm.top_start.substring(0, 7); // "2024-12-01" -> "2024-12"
+      params.set('month', month);
+    }
+    
+    navigate(`/schedule?${params.toString()}`);
+  }, [navigate, createScheduleForm.team_id, createScheduleForm.top_start]);
+
+  // Polling для статуса генерации
+  useEffect(() => {
+    if (!generationId) return;
+    
+    const pollStatus = async () => {
+      try {
+        const result = await getGenerationStatus(generationId).unwrap();
+        setGenerationStatus(result);
+        
+        if (result.status === 'completed') {
+          // Инвалидируем кэш расписания на фронте
+          dispatch(scheduleApi.util.invalidateTags(['Schedule']));
+          message.success('График успешно сгенерирован!');
+          setTimeout(() => navigateToSchedule(), 2000);
+        } else if (result.status === 'failed') {
+          message.error(result.error_message || 'Ошибка при генерации графика');
+        }
+      } catch (error) {
+        console.error('Error polling generation status:', error);
+      }
+    };
+    
+    // Первый запрос сразу
+    pollStatus();
+    
+    // Затем каждые 2 секунды пока не завершится
+    const interval = setInterval(() => {
+      if (generationStatus?.status === 'completed' || generationStatus?.status === 'failed') {
+        clearInterval(interval);
+        return;
+      }
+      pollStatus();
+    }, 2000);
+    
+    return () => clearInterval(interval);
+  }, [generationId, generationStatus?.status, getGenerationStatus, navigateToSchedule]);
+
+  const onSubmitHandler = useCallback(async () => {
     if (!createScheduleForm.team_id || !createScheduleForm.top_start || !createScheduleForm.bottom_start) {
       return;
     }
 
     try {
-      await createSchedule(createScheduleForm).unwrap();
-      navigate('/schedule');
+      const result = await createSchedule(createScheduleForm).unwrap();
+      setGenerationId(result.generation_id);
+      setGenerationStatus({
+        id: result.generation_id,
+        status: 'pending',
+        progress: 0,
+        total_users: result.total_users,
+        processed_users: 0,
+      });
+      setCurrentStep(4); // Переходим к шагу генерации
+      message.info('Генерация графика запущена в фоновом режиме');
     } catch (error) {
       console.error('Error creating schedule:', error);
+      message.error('Ошибка при запуске генерации графика');
     }
-  };
+  }, [createSchedule, createScheduleForm]);
 
-  const handleFormChange = (field: keyof IScheduleForm, value:FormFieldValue) => {
-    setCreateScheduleForm((prev:IScheduleForm) => ({
+  const handleFormChange = useCallback((field: keyof IScheduleForm, value: FormFieldValue) => {
+    setCreateScheduleForm((prev) => ({
       ...prev,
       [field]: value
     }));
@@ -62,7 +140,7 @@ const CreateSchedulePage: FC = () => {
     } else if (field === 'bottom_start' && value && currentStep === 2) {
       setCurrentStep(3);
     }
-  };
+  }, [currentStep]);
 
   const isFormValid = (): boolean => {
     return !!(createScheduleForm.team_id && createScheduleForm.top_start && createScheduleForm.bottom_start);
@@ -71,25 +149,109 @@ const CreateSchedulePage: FC = () => {
   const steps = [
     {
       title: 'Выбор отдела',
-      description: 'Выберите отдел для генерации графика',
+      description: 'Выберите отдел',
       completed: !!createScheduleForm.team_id
     },
     {
       title: 'Верхние смены',
-      description: 'Укажите начало верхних смен',
+      description: 'Дата начала',
       completed: !!createScheduleForm.top_start
     },
     {
       title: 'Нижние смены',
-      description: 'Укажите начало нижних смен',
+      description: 'Дата начала',
       completed: !!createScheduleForm.bottom_start
     },
     {
       title: 'Подтверждение',
-      description: 'Запуск генерации графика',
-      completed: false
+      description: 'Запуск',
+      completed: !!generationId
+    },
+    {
+      title: 'Генерация',
+      description: 'Обработка',
+      completed: generationStatus?.status === 'completed'
     }
   ];
+
+  // Если идёт генерация - показываем прогресс
+  if (generationId && generationStatus) {
+    const isProcessing = generationStatus.status === 'pending' || generationStatus.status === 'processing';
+    const isCompleted = generationStatus.status === 'completed';
+    const isFailed = generationStatus.status === 'failed';
+
+    return (
+      <div style={{ padding: 'clamp(12px, 2vw, 24px)', maxWidth: '100%', margin: '0 auto' }}>
+        <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+          <Col xs={24}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
+                <CalendarOutlined style={{ color: '#1890ff', marginRight: 12 }} />
+                Генерация графика
+              </Title>
+            </div>
+          </Col>
+        </Row>
+
+        <Row justify="center">
+          <Col xs={24} lg={12}>
+            <Card>
+              {isProcessing && (
+                <Result
+                  icon={<LoadingOutlined style={{ color: '#1890ff' }} />}
+                  title="Генерация графика..."
+                  subTitle={`Обработано ${generationStatus.processed_users} из ${generationStatus.total_users} сотрудников`}
+                  extra={
+                    <Progress 
+                      percent={generationStatus.progress} 
+                      status="active"
+                      strokeColor={{ from: '#108ee9', to: '#87d068' }}
+                    />
+                  }
+                />
+              )}
+
+              {isCompleted && (
+                <Result
+                  status="success"
+                  title="График успешно сгенерирован!"
+                  subTitle={`Обработано ${generationStatus.total_users} сотрудников`}
+                  extra={
+                    <Button type="primary" onClick={navigateToSchedule}>
+                      Перейти к графику
+                    </Button>
+                  }
+                />
+              )}
+
+              {isFailed && (
+                <Result
+                  status="error"
+                  icon={<CloseCircleOutlined />}
+                  title="Ошибка генерации"
+                  subTitle={generationStatus.error_message || 'Произошла неизвестная ошибка'}
+                  extra={
+                    <Space>
+                      <Button type="primary" onClick={() => {
+                        setGenerationId(null);
+                        setGenerationStatus(null);
+                        setCurrentStep(0);
+                      }}>
+                        Попробовать снова
+                      </Button>
+                      <Button onClick={() => navigate('/schedule')}>
+                        Вернуться к графику
+                      </Button>
+                    </Space>
+                  }
+                />
+              )}
+            </Card>
+          </Col>
+        </Row>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: 'clamp(12px, 2vw, 24px)', maxWidth: '100%', margin: '0 auto' }}>
@@ -107,7 +269,7 @@ const CreateSchedulePage: FC = () => {
           
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <Title 
-              level={1} 
+              level={2} 
               style={{ 
                 margin: 0, 
                 marginBottom: 8,
@@ -115,7 +277,6 @@ const CreateSchedulePage: FC = () => {
                 alignItems: 'center', 
                 justifyContent: 'center', 
                 gap: 12,
-                fontSize: 'clamp(24px, 3vw, 32px)'
               }}
             >
               <CalendarOutlined style={{ color: '#1890ff' }} />
@@ -129,13 +290,12 @@ const CreateSchedulePage: FC = () => {
       </Row>
 
       {/* Шаги процесса */}
-      <Card style={{ marginBottom: 24 }} bodyStyle={{ padding: 'clamp(16px, 2vw, 24px)' }}>
-        <Steps current={currentStep} size="small">
-          {steps.map((step, index) => (
+      <Card style={{ marginBottom: 24 }} bodyStyle={{ padding: 'clamp(12px, 2vw, 20px)' }}>
+        <Steps current={currentStep} size="small" responsive={false}>
+          {steps.slice(0, 4).map((step, index) => (
             <Step 
               key={index}
               title={step.title}
-              description={step.description}
               icon={step.completed ? <CheckCircleOutlined /> : undefined}
             />
           ))}
@@ -153,29 +313,6 @@ const CreateSchedulePage: FC = () => {
             isSubmitting={isCreating}
             isValid={isFormValid()}
           />
-        </Col>
-      </Row>
-
-      {/* Дополнительная информация */}
-      <Row gutter={[24, 24]} style={{ marginTop: 32 }}>
-        <Col xs={24} md={12}>
-          <Card size="small" title="О верхних сменах">
-            <Space direction="vertical" size="small">
-              <Text>• Обычно дневные смены</Text>
-              <Text>• Начало работы с 08:00 до 20:00</Text>
-              <Text>• Стандартная продолжительность: 12 часов</Text>
-            </Space>
-          </Card>
-        </Col>
-        
-        <Col xs={24} md={12}>
-          <Card size="small" title="О нижних сменах">
-            <Space direction="vertical" size="small">
-              <Text>• Обычно ночные смены</Text>
-              <Text>• Начало работы с 20:00 до 08:00</Text>
-              <Text>• Стандартная продолжительность: 12 часов</Text>
-            </Space>
-          </Card>
         </Col>
       </Row>
     </div>

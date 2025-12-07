@@ -8,7 +8,6 @@ const { Option } = Select;
 
 interface PenaltiesFiltersProps {
   filters: IPenaltiesFilter;
-  users?: Array<{ id: number; name: string; surname: string }>;
   groups?: Array<{ id: number; name: string }>;
   creators?: Array<{ id: number; name: string; surname: string }>;
   onApplyFilters: (filters: IPenaltiesFilter) => void;
@@ -20,7 +19,6 @@ interface PenaltiesFiltersProps {
 
 const PenaltiesFilters: React.FC<PenaltiesFiltersProps> = ({
   filters,
-  users = [],
   groups = [],
   creators = [],
   onApplyFilters,
@@ -46,13 +44,6 @@ const PenaltiesFilters: React.FC<PenaltiesFiltersProps> = ({
     }));
   }, []);
 
-  const handleUserChange = useCallback((value: number | null) => {
-    setLocalFilters(prev => ({
-      ...prev,
-      user_id: value || undefined,
-    }));
-  }, []);
-
   const handleGroupChange = useCallback((value: number | null) => {
     setLocalFilters(prev => ({
       ...prev,
@@ -67,10 +58,10 @@ const PenaltiesFilters: React.FC<PenaltiesFiltersProps> = ({
     }));
   }, []);
 
-  const handleCreatedDateChange = useCallback((date: Dayjs | null) => {
+  const handleViolationDateChange = useCallback((date: Dayjs | null) => {
     setLocalFilters(prev => ({
       ...prev,
-      created_at: date ? date.format('YYYY-MM-DD') : undefined,
+      violation_date: date ? date.format('YYYY-MM-DD') : undefined,
     }));
   }, []);
 
@@ -81,24 +72,15 @@ const PenaltiesFilters: React.FC<PenaltiesFiltersProps> = ({
   const handleResetFilters = useCallback(() => {
     const resetFilters: IPenaltiesFilter = {
       search: undefined,
-      user_id: undefined,
       group_id: undefined,
       created_by: undefined,
-      created_at: undefined,
+      violation_date: undefined,
       page: 1,
       per_page: filters.per_page || 10,
     };
     setLocalFilters(resetFilters);
     onResetFilters();
   }, [filters.per_page, onResetFilters]);
-
-  const userOptions = useMemo(() => 
-    users.map(user => (
-      <Option key={user.id} value={user.id}>
-        {user.name} {user.surname}
-      </Option>
-    )), [users]
-  );
 
   const groupOptions = useMemo(() => 
     groups.map(group => (
@@ -138,23 +120,6 @@ const PenaltiesFilters: React.FC<PenaltiesFiltersProps> = ({
             prefix={<SearchOutlined />}
           />
           <Select
-            placeholder="Пользователь"
-            allowClear
-            showSearch
-            filterOption={(input, option) => {
-              const label = typeof option?.label === 'string' 
-                ? option.label 
-                : String(option?.children || '');
-              return label.toLowerCase().includes(input.toLowerCase());
-            }}
-            style={{ width: 200, minWidth: 150 }}
-            size="middle"
-            value={localFilters.user_id || null}
-            onChange={handleUserChange}
-          >
-            {userOptions}
-          </Select>
-          <Select
             placeholder="Группа пользователя"
             allowClear
             showSearch
@@ -189,11 +154,11 @@ const PenaltiesFilters: React.FC<PenaltiesFiltersProps> = ({
             {creatorOptions}
           </Select>
           <DatePicker
-            placeholder="Дата создания"
+            placeholder="Дата нарушения"
             size="middle"
             style={{ width: 180, minWidth: 150 }}
-            value={localFilters.created_at ? dayjs(localFilters.created_at) : null}
-            onChange={handleCreatedDateChange}
+            value={localFilters.violation_date ? dayjs(localFilters.violation_date) : null}
+            onChange={handleViolationDateChange}
             format="DD.MM.YYYY"
           />
         </Flex>

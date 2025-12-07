@@ -33,31 +33,64 @@ import {
 } from "../../api/penaltiesApi";
 import { useGetAllGroupsQuery } from "../../api/groupsApi";
 import { useLazyAllUsersQuery } from "../../api/usersApi";
-import type { IPenalty, IPenaltyForm, PenaltyStatus, IPenaltiesFilter } from "../../types/penalty.types";
+import type { IPenalty, IPenaltyForm, PenaltyFilterStatus, IPenaltiesFilter } from "../../types/penalty.types";
 import type { IUser } from "../../types/user.types";
 import { formatDate } from "../../utils/dateUtils";
 import { PenaltyModal, PenaltiesPageHeader, PenaltiesFilters } from "../../components/Penalties";
+import { usePermissions } from "../../hooks/usePermissions";
+import { useUrlFilters } from "../../hooks/useUrlFilters";
+import { PERMISSIONS } from "../../constants/permissions";
 import styles from "../../styles/users/users-page.module.css";
 
 const { Text } = Typography;
 
+// Дефолтные значения фильтров
+const defaultFilters = {
+  search: undefined as string | undefined,
+  user_id: undefined as number | undefined,
+  group_id: undefined as number | undefined,
+  created_by: undefined as number | undefined,
+  violation_date: undefined as string | undefined,
+  status: 'all' as PenaltyFilterStatus,
+  page: 1,
+  per_page: 10,
+};
+
+// Парсеры для URL фильтров (статичные)
+const penaltyFilterParsers = {
+  user_id: (val: string) => val ? Number(val) : undefined,
+  group_id: (val: string) => val ? Number(val) : undefined,
+  created_by: (val: string) => val ? Number(val) : undefined,
+  violation_date: (val: string) => val || undefined,
+  page: (val: string) => Number(val) || 1,
+  per_page: (val: string) => Number(val) || 10,
+  status: (val: string) => (val || 'all') as PenaltyFilterStatus,
+};
+
 const PenaltiesPage: FC = () => {
   const { token } = theme.useToken();
-  const [activeTab, setActiveTab] = useState<PenaltyStatus>('all');
-  const [filters, setFilters] = useState<IPenaltiesFilter>({
-    search: undefined,
-    user_id: undefined,
-    group_id: undefined,
-    created_by: undefined,
-    created_at: undefined,
-    page: 1,
-    per_page: 10,
+  const { hasPermission } = usePermissions();
+  
+  // Permissions
+  const canCreate = hasPermission(PERMISSIONS.PENALTIES_CREATE);
+  const canUpdate = hasPermission(PERMISSIONS.PENALTIES_UPDATE);
+  const canApprove = hasPermission(PERMISSIONS.PENALTIES_APPROVE);
+  const canReject = hasPermission(PERMISSIONS.PENALTIES_REJECT);
+
+  // Фильтры с сохранением в URL
+  const { filters: urlFilters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters({
+    defaults: defaultFilters,
+    parsers: penaltyFilterParsers,
   });
+
+  const activeTab = urlFilters.status;
+  const filters: IPenaltiesFilter = urlFilters;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPenalty, setEditingPenalty] = useState<IPenalty | null>(null);
   const [form] = Form.useForm<IPenaltyForm>();
 
-  // Добавляем статус в фильтры на основе активного таба
+  // Формируем фильтры для API (убираем status='all')
   const filtersWithStatus = useMemo(() => ({
     ...filters,
     status: activeTab === 'all' ? undefined : activeTab,
@@ -121,14 +154,6 @@ const PenaltiesPage: FC = () => {
     loadAllUsers();
   }, [loadAllUsers]);
 
-  const users = useMemo(() => {
-    return allUsers.map(user => ({
-      id: user.id,
-      name: user.name,
-      surname: user.surname,
-    }));
-  }, [allUsers]);
-
   const creators = useMemo(() => {
     return allUsers.map(user => ({
       id: user.id,
@@ -143,47 +168,29 @@ const PenaltiesPage: FC = () => {
   const [rejectPenalty, { isLoading: isRejecting }] = useRejectPenaltyMutation();
 
   const handleTabChange = useCallback((key: string) => {
-    const newStatus = key as PenaltyStatus;
-    setActiveTab(newStatus);
-    setFilters(prev => ({ ...prev, page: 1 }));
-  }, []);
+    const newStatus = key as PenaltyFilterStatus;
+    setFilters({ status: newStatus, page: 1 });
+  }, [setFilters]);
 
   const handleApplyFilters = useCallback((newFilters: IPenaltiesFilter) => {
-    setFilters(prev => ({
-      ...prev,
-      ...newFilters,
-      page: 1,
-    }));
-  }, []);
+    setFilters({ ...newFilters, page: 1 });
+  }, [setFilters]);
 
   const handleResetFilters = useCallback(() => {
-    const resetFilters: IPenaltiesFilter = {
-      search: undefined,
-      user_id: undefined,
-      group_id: undefined,
-      created_by: undefined,
-      created_at: undefined,
-      page: 1,
-      per_page: filters.per_page || 10,
-    };
-    setFilters(resetFilters);
-  }, [filters.per_page]);
+    resetUrlFilters();
+  }, [resetUrlFilters]);
 
   const handleTableChange = useCallback((pagination: { current: number; pageSize: number }) => {
-    setFilters(prev => ({
-      ...prev,
-      page: pagination.current,
-      per_page: pagination.pageSize,
-    }));
-  }, []);
+    setFilters({ page: pagination.current, per_page: pagination.pageSize });
+  }, [setFilters]);
 
   const hasActiveFilters = useMemo((): boolean => {
     return !!(
       filters.search || 
       filters.user_id || 
       filters.group_id || 
-      filters.created_by || 
-      filters.created_at
+      filters.created_by ||
+      filters.violation_date
     );
   }, [filters]);
 
@@ -199,6 +206,8 @@ const PenaltiesPage: FC = () => {
       user_id: penalty.user_id,
       hours_to_deduct: penalty.hours_to_deduct,
       comment: penalty.comment,
+      chat_id: penalty.chat_id,
+      violation_date: penalty.violation_date,
       status: penalty.status
     });
     setIsModalOpen(true);
@@ -279,58 +288,44 @@ const PenaltiesPage: FC = () => {
 
   const columns: TableColumnsType<IPenalty> = useMemo(() => [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      width: 80,
-      align: 'center',
-      fixed: 'left',
-    },
-    {
       title: 'Пользователь',
       width: 200,
       align: 'center',
-      render: (_, record) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
-          <div style={{
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontSize: 12,
-            fontWeight: 'bold',
-            flexShrink: 0
-          }}>
-            {record.user?.name?.[0]}{record.user?.surname?.[0]}
-          </div>
-          <div style={{ textAlign: 'left', minWidth: 0 }}>
-            <div style={{ fontWeight: 500, fontSize: 13, lineHeight: 1.4 }}>
-              {record.user?.name} {record.user?.surname}
+      render: (_, record) => {
+        const initials = record.user?.fullname?.split(' ').map(n => n[0]).join('') || '?';
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: 12,
+              fontWeight: 'bold',
+              flexShrink: 0
+            }}>
+              {initials}
             </div>
-            <Text type="secondary" style={{ fontSize: 11, lineHeight: 1.3 }}>
-              {record.user?.email}
-            </Text>
+            <div style={{ fontWeight: 500, fontSize: 13, lineHeight: 1.4 }}>
+              {record.user?.fullname || '-'}
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       title: 'Кто создал',
-      width: 200,
+      width: 180,
       align: 'center',
       render: (_, record) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
           <UserOutlined style={{ color: token.colorPrimary, fontSize: 14 }} />
-          <div style={{ textAlign: 'left', minWidth: 0 }}>
-            <div style={{ fontWeight: 500, fontSize: 13, lineHeight: 1.4 }}>
-              {record.creator?.name} {record.creator?.surname}
-            </div>
-            <Text type="secondary" style={{ fontSize: 11, lineHeight: 1.3 }}>
-              {record.creator?.email}
-            </Text>
+          <div style={{ fontWeight: 500, fontSize: 13, lineHeight: 1.4 }}>
+            {record.creator?.fullname || '-'}
           </div>
         </div>
       ),
@@ -350,21 +345,51 @@ const PenaltiesPage: FC = () => {
       title: 'Комментарий',
       dataIndex: 'comment',
       width: 300,
-      align: 'center',
-      ellipsis: {
-        showTitle: false,
-      },
+      align: 'left',
+      onCell: () => ({
+        style: {
+          maxWidth: 300,
+          minWidth: 300,
+        }
+      }),
       render: (comment: string) => (
-        <Tooltip
-          title={comment}
-          overlayInnerStyle={{
-            backgroundColor: token.colorBgElevated,
-            color: token.colorText,
-            border: `1px solid ${token.colorBorder}`
-          }}
+        <Tooltip 
+          title={comment || '-'} 
+          placement="topLeft"
+          overlayInnerStyle={{ maxWidth: 700, width: 700, whiteSpace: 'pre-wrap' }}
         >
-          <Text style={{ fontSize: 13 }}>{comment}</Text>
+          <Text
+            style={{
+              fontSize: 13,
+              display: 'block',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              lineHeight: 1.5
+            }}
+            ellipsis
+          >
+            {comment || '-'}
+          </Text>
         </Tooltip>
+      ),
+    },
+    {
+      title: 'ID чата',
+      dataIndex: 'chat_id',
+      width: 120,
+      align: 'center',
+      render: (chatId: string) => (
+        <Text style={{ fontSize: 13, fontFamily: 'monospace' }}>{chatId || '-'}</Text>
+      ),
+    },
+    {
+      title: 'Дата нарушения',
+      dataIndex: 'violation_date',
+      width: 130,
+      align: 'center',
+      render: (date: string) => (
+        <Text style={{ fontSize: 13 }}>{date ? formatDate(date) : '-'}</Text>
       ),
     },
     {
@@ -379,40 +404,33 @@ const PenaltiesPage: FC = () => {
       ),
     },
     {
-      title: 'Дата создания',
-      dataIndex: 'created_at',
-      width: 180,
-      align: 'center',
-      render: (date: string) => (
-        <Text style={{ fontSize: 13 }}>{formatDate(date)}</Text>
-      ),
-    },
-    {
       title: 'Действия',
       width: 200,
       fixed: 'right',
       align: 'center',
       render: (_, record) => (
         <Space size="small">
-          <Tooltip 
-            title="Редактировать"
-            overlayInnerStyle={{
-              backgroundColor: token.colorBgElevated,
-              color: token.colorText,
-              border: `1px solid ${token.colorBorder}`
-            }}
-          >
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => showEditModal(record)}
-              style={{ color: '#1890ff' }}
-            />
-          </Tooltip>
+          {canUpdate && (
+            <Tooltip 
+              title="Редактировать"
+              overlayInnerStyle={{
+                backgroundColor: token.colorBgElevated,
+                color: token.colorText,
+                border: `1px solid ${token.colorBorder}`
+              }}
+            >
+              <Button
+                type="text"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => showEditModal(record)}
+                style={{ color: '#1890ff' }}
+              />
+            </Tooltip>
+          )}
           
           {/* Показываем кнопку "Одобрить" для pending и rejected */}
-          {(record.status === 'pending' || record.status === 'rejected') && (
+          {canApprove && (record.status === 'pending' || record.status === 'rejected') && (
             <Popconfirm
               title="Одобрить штраф"
               description={
@@ -445,7 +463,7 @@ const PenaltiesPage: FC = () => {
           )}
           
           {/* Показываем кнопку "Отклонить" для pending и approved */}
-          {(record.status === 'pending' || record.status === 'approved') && (
+          {canReject && (record.status === 'pending' || record.status === 'approved') && (
             <Popconfirm
               title="Отклонить штраф"
               description={
@@ -479,7 +497,7 @@ const PenaltiesPage: FC = () => {
         </Space>
       ),
     },
-  ], [showEditModal, handleApprove, handleReject, isApproving, isRejecting, getStatusColor, getStatusText, token]);
+  ], [showEditModal, handleApprove, handleReject, isApproving, isRejecting, getStatusColor, getStatusText, token, canUpdate, canApprove, canReject]);
 
   const tabItems = useMemo(() => [
     {
@@ -539,11 +557,11 @@ const PenaltiesPage: FC = () => {
         onRefetch={refetch}
         hasActiveFilters={hasActiveFilters}
         onCreateClick={showCreateModal}
+        canCreate={canCreate}
       />
 
       <PenaltiesFilters
         filters={filters}
-        users={users}
         groups={groups || []}
         creators={creators}
         onApplyFilters={handleApplyFilters}
@@ -586,7 +604,8 @@ const PenaltiesPage: FC = () => {
           columns={columns}
           loading={isLoading || isApproving || isRejecting || isFetching}
           rowKey="id"
-          scroll={{ x: 'max-content' }}
+          tableLayout="fixed"
+          scroll={{ x: 1500 }}
           pagination={{
             current: paginationMeta?.current_page || 1,
             pageSize: paginationMeta?.per_page || 10,

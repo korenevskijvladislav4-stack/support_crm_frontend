@@ -1,7 +1,7 @@
 // app/api/authApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithReauth } from './baseQueries/baseQueryWithReauth';
-import type { IAttempt, IAttemptForm, IAttemptsFilter, AttemptsResponse } from '../types/attempts.types';
+import type { IAttempt, IAttemptForm, IAttemptsFilter, AttemptsResponse } from '../types/attempt.types';
 
 export const attemptsApi = createApi({
     reducerPath: 'attemptsApi',

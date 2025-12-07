@@ -1,4 +1,4 @@
-import React, { useState, type FC } from "react"
+import React, { useState, useCallback, useMemo, useEffect, type FC } from "react"
 import { 
   Table,
   Space, 
@@ -8,35 +8,62 @@ import {
   Tag,
   message,
   Form,
+  Input,
+  Button,
+  Flex,
+  Select,
   type TableColumnsType 
 } from "antd";
 import { Link } from "react-router-dom";
-import SettingsPageHeader from "../../components/Settings/SettingsPageHeader";
-import SettingsStatsCards from "../../components/Settings/SettingsStatsCards";
 import SettingsActionButtons from "../../components/Settings/SettingsActionButtons";
 import { GroupModal } from "../../components/Settings/Modals";
-import styles from "../../styles/settings/settings-pages.module.css";
+import { usePermissions } from "../../hooks/usePermissions";
+import { useUrlFilters } from "../../hooks/useUrlFilters";
+import { PERMISSIONS } from "../../constants/permissions";
+import styles from "../../styles/users/users-page.module.css";
 import {
   TeamOutlined,
-  CrownOutlined
+  CrownOutlined,
+  SearchOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  UserOutlined,
+  ClearOutlined,
+  CheckOutlined
 } from '@ant-design/icons';
 import { 
   useCreateGroupMutation, 
   useUpdateGroupMutation,
   useDestroyGroupMutation, 
-  useGetAllGroupsQuery 
+  useLazyGetGroupsQuery
 } from "../../api/groupsApi"
-import { type IGroup, type IGroupForm } from "../../types/groups.types";
+import { type IGroup, type IGroupForm, type IGroupFilters } from "../../types/group.types";
 import type { IUser } from "../../types/user.types";
 import { useGetAllTeamsQuery } from "../../api/teamsApi";
 import { useLazyAllUsersQuery } from "../../api/usersApi";
 import { theme } from 'antd';
 
-const { Text } = Typography;
-const { useToken } = theme;
+const { Text, Title } = Typography;
+
+// Дефолтные значения фильтров
+const defaultFilters: IGroupFilters = {
+  search: '',
+  team_id: undefined,
+  shift_type: undefined,
+  page: 1,
+  per_page: 10,
+};
+
+// Парсеры для URL фильтров
+const filterParsers = {
+  team_id: (val: string) => val ? Number(val) : undefined,
+  page: (val: string) => Number(val) || 1,
+  per_page: (val: string) => Number(val) || 10,
+};
 
 const SettingsGroupPage: FC = () => {
-  const { token } = useToken();
+  const { token } = theme.useToken();
+  const { hasPermission } = usePermissions();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingGroup, setEditingGroup] = useState<IGroup | null>(null);
   const [groupName, setGroupName] = useState<string>('');
@@ -47,17 +74,62 @@ const SettingsGroupPage: FC = () => {
   const [allUsers, setAllUsers] = useState<IUser[]>([]);
   const [form] = Form.useForm<IGroupForm>();
 
-  const { data: groups, isLoading: isGroupsLoading, isFetching: isGroupsFetching, refetch } = useGetAllGroupsQuery();
+  // Фильтры из URL
+  const { filters, setFilters, resetFilters } = useUrlFilters<IGroupFilters>({
+    defaults: defaultFilters,
+    parsers: filterParsers,
+  });
+
+  // Локальное состояние для фильтров (до применения)
+  const [localFilters, setLocalFilters] = useState({
+    search: filters.search || '',
+    team_id: filters.team_id,
+    shift_type: filters.shift_type,
+  });
+
+  // Синхронизация локальных фильтров с URL
+  useEffect(() => {
+    setLocalFilters({
+      search: filters.search || '',
+      team_id: filters.team_id,
+      shift_type: filters.shift_type,
+    });
+  }, [filters.search, filters.team_id, filters.shift_type]);
+
+  // Permissions
+  const canCreate = hasPermission(PERMISSIONS.GROUPS_CREATE);
+  const canUpdate = hasPermission(PERMISSIONS.GROUPS_UPDATE);
+  const canDelete = hasPermission(PERMISSIONS.GROUPS_DELETE);
+
+  // API запросы с серверной фильтрацией
+  const [trigger, { data: groupsResponse, isLoading, isFetching }] = useLazyGetGroupsQuery();
   const { data: teams, isLoading: isTeamsLoading } = useGetAllTeamsQuery();
   const [triggerUsers, { isLoading: isLoadingUsers }] = useLazyAllUsersQuery();
-  
-  // Используем собранных пользователей из состояния для модального окна
-  const users = allUsers;
   const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [updateGroup, { isLoading: isUpdating }] = useUpdateGroupMutation();
   const [destroyGroup, { isLoading: isDestroying }] = useDestroyGroupMutation();
 
-  // Функция для загрузки всех пользователей по отделу (без пагинации)
+  const groups = groupsResponse?.data || [];
+  const meta = groupsResponse?.meta;
+  const hasActiveFilters = !!(filters.search || filters.team_id || filters.shift_type);
+
+  // Загрузка данных при изменении фильтров в URL
+  useEffect(() => {
+    trigger(filters);
+  }, [filters, trigger]);
+
+  // Применить фильтры
+  const handleApplyFilters = useCallback(() => {
+    setFilters({ ...localFilters, page: 1 });
+  }, [localFilters, setFilters]);
+
+  // Сбросить фильтры
+  const handleResetFilters = useCallback(() => {
+    setLocalFilters({ search: '', team_id: undefined, shift_type: undefined });
+    resetFilters();
+  }, [resetFilters]);
+
+  // Загрузка пользователей для модального окна
   const loadUsersByTeam = React.useCallback(async (teamIdValue: number | null) => {
     if (!teamIdValue) {
       setAllUsers([]);
@@ -67,7 +139,6 @@ const SettingsGroupPage: FC = () => {
     const collectedUsers: IUser[] = [];
     let currentPage = 1;
     let hasMore = true;
-    const perPage = 100; // Максимальное значение, разрешенное сервером
     
     while (hasMore) {
       try {
@@ -75,190 +146,182 @@ const SettingsGroupPage: FC = () => {
           team: [teamIdValue], 
           status: 'active',
           page: currentPage,
-          per_page: perPage 
+          per_page: 100 
         }).unwrap();
         
         if (response.data && response.data.length > 0) {
           collectedUsers.push(...response.data);
-          
-          // Проверяем, есть ли еще страницы
-          if (response.meta && response.meta.last_page) {
-            hasMore = currentPage < response.meta.last_page;
-            currentPage++;
-          } else {
-            // Если нет метаданных, проверяем по количеству полученных записей
-            hasMore = response.data.length === perPage;
-            currentPage++;
-          }
+          hasMore = response.meta ? currentPage < response.meta.last_page : response.data.length === 100;
+          currentPage++;
         } else {
           hasMore = false;
         }
-      } catch (error) {
-        console.error('Error loading users:', error);
+      } catch {
         hasMore = false;
       }
     }
     
-    // Сохраняем все собранные пользователи в состояние
     setAllUsers(collectedUsers);
   }, [triggerUsers]);
 
-  // Загружаем пользователей при открытии модального окна или изменении отдела
   React.useEffect(() => {
     if (isModalOpen && teamId) {
       loadUsersByTeam(teamId);
     }
   }, [isModalOpen, teamId, loadUsersByTeam]);
 
-  // Обработчик изменения отдела
   const handleTeamIdChange = React.useCallback((value: number | null) => {
     setTeamId(value);
-    setSupervisorId(null); // Сбрасываем ответственного при смене отдела
+    setSupervisorId(null);
     form.setFieldValue('supervisor_id', null);
     if (isModalOpen && value) {
       loadUsersByTeam(value);
     }
   }, [isModalOpen, loadUsersByTeam, form]);
 
-  const onDeleteClick = async (id: number) => {
+  const onDeleteClick = useCallback(async (id: number) => {
     try {
       await destroyGroup(id).unwrap();
       message.success('Группа успешно удалена');
-    } catch (error) {
-      console.error('Error deleting group:', error);
+      trigger(filters);
+    } catch {
       message.error('Ошибка при удалении группы');
     }
-  };
+  }, [destroyGroup, filters, trigger]);
 
-  const getShiftTypeColor = (shiftType: string) => {
-    switch (shiftType) {
-      case 'День': return 'green';
-      case 'Ночь': return 'purple';
-      default: return 'default';
+  const getShiftTypeColor = useCallback((type: string) => {
+    return type === 'День' ? 'green' : type === 'Ночь' ? 'purple' : 'default';
+  }, []);
+
+  const getShiftNumberColor = useCallback((num: string) => {
+    return num === 'Верхняя' ? 'blue' : num === 'Нижняя' ? 'orange' : 'default';
+  }, []);
+
+  const showEditModal = useCallback((group: IGroup) => {
+    setEditingGroup(group);
+    setGroupName(group.name);
+    setTeamId(group.team?.id ?? null);
+    setShiftType(group.shift?.type ?? null);
+    setShiftNumber(group.shift?.number ?? null);
+    setSupervisorId(group.supervisor?.id ?? null);
+    form.setFieldsValue({
+      name: group.name,
+      team_id: group.team?.id ?? null,
+      shift_type: group.shift?.type ?? null,
+      shift_number: group.shift?.number ?? null,
+      supervisor_id: group.supervisor?.id ?? null
+    });
+    setIsModalOpen(true);
+    if (group.team?.id) {
+      loadUsersByTeam(group.team.id);
     }
-  };
+  }, [form, loadUsersByTeam]);
 
-  const getShiftNumberColor = (shiftNumber: string) => {
-    switch (shiftNumber) {
-      case 'Верхняя': return 'blue';
-      case 'Нижняя': return 'orange';
-      default: return 'default';
-    }
-  };
-
-  const getShiftTypeIcon = (shiftType: string) => {
-    switch (shiftType) {
-      case 'День': return '☀️';
-      case 'Ночь': return '🌙';
-      default: return '⏰';
-    }
-  };
-
-  const columns: TableColumnsType<IGroup> = [
+  const columns: TableColumnsType<IGroup> = useMemo(() => [
     {
-      title: 'Название группы',
+      title: 'Название',
       dataIndex: 'name',
-      width: 200,
+      width: 180,
       render: (name: string, record: IGroup) => (
-        <div className={styles.tableCellContent}>
-          <div className={`${styles.tableIcon} ${styles.tableIconGradient}`}>
+        <Space>
+          <div style={{
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: 12,
+          }}>
             <TeamOutlined />
           </div>
           <div>
-            <div className={styles.tableCellText} style={{ color: token.colorText }}>{name}</div>
-            <Text type="secondary" className={styles.tableCellSecondary}>ID: {record.id}</Text>
+            <Text strong style={{ fontSize: 13 }}>{name}</Text>
+            <div>
+              <Text type="secondary" style={{ fontSize: 11 }}>ID: {record.id}</Text>
+            </div>
           </div>
-        </div>
+        </Space>
       ),
     },
     {
-      title: 'Тип смены',
-      dataIndex: 'shift_type',
-      width: 120,
-      render: (shiftType: string) => (
-        <Tag 
-          color={getShiftTypeColor(shiftType)}
-          icon={<span style={{ marginRight: 4 }}>{getShiftTypeIcon(shiftType)}</span>}
-          style={{ fontWeight: 500 }}
-        >
-          {shiftType}
-        </Tag>
-      )
-    },
-    {
-      title: 'Очередность',
-      dataIndex: 'shift_number',
-      width: 120,
-      render: (shiftNumber: string) => (
-        <Tag color={getShiftNumberColor(shiftNumber)} style={{ fontWeight: 500 }}>
-          {shiftNumber}
-        </Tag>
+      title: 'Смена',
+      width: 180,
+      render: (_, record: IGroup) => (
+        <Space size={4}>
+          <Tag color={getShiftTypeColor(record.shift?.type || '')} style={{ margin: 0, fontSize: 11 }}>
+            {record.shift?.type === 'День' ? '☀️' : '🌙'} {record.shift?.type || '—'}
+          </Tag>
+          <Tag color={getShiftNumberColor(record.shift?.number || '')} style={{ margin: 0, fontSize: 11 }}>
+            {record.shift?.number || '—'}
+          </Tag>
+        </Space>
       )
     },
     {
       title: 'Отдел',
-      dataIndex: 'team',
-      width: 150,
-      render: (team: string) => (
-        <Tag color="blue" style={{ margin: 0 }}>
-          {team}
+      width: 130,
+      render: (_: unknown, record: IGroup) => (
+        <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
+          {record.team?.name || 'Не указан'}
         </Tag>
       )
     },
     {
       title: 'Ответственный',
-      dataIndex: 'supervisor',
-      width: 200,
-      render: (supervisor: IGroup['supervisor']) => {
-        if (!supervisor) {
-          return <Text type="secondary">Не назначен</Text>;
+      width: 180,
+      render: (_, record: IGroup) => {
+        if (!record.supervisor) {
+          return <Text type="secondary" style={{ fontSize: 12 }}>Не назначен</Text>;
         }
-        
         return (
-          <Link to={`/users/${supervisor.id}`} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <CrownOutlined style={{ color: '#faad14', fontSize: 14 }} />
-            <span style={{ color: token.colorPrimary }}>
-              {supervisor.fullname}
-            </span>
+          <Link to={`/users/${record.supervisor.id}`}>
+            <Space size={4}>
+              <CrownOutlined style={{ color: '#faad14', fontSize: 12 }} />
+              <Text style={{ fontSize: 12, color: token.colorPrimary }}>
+                {record.supervisor.full_name}
+              </Text>
+            </Space>
           </Link>
         );
       }
     },
     {
-      title: 'Дата создания',
-      dataIndex: 'created_at',
+      title: 'Пользователи',
       width: 120,
-      render: (date: string) => (
-        <Text type="secondary">
-          {new Date(date).toLocaleDateString('ru-RU')}
-        </Text>
+      align: 'center',
+      render: (_, record: IGroup) => (
+        <Link to={`/users?group=${record.id}`}>
+          <Button type="link" size="small" icon={<UserOutlined />}>
+            {record.users?.count ?? 0}
+          </Button>
+        </Link>
       )
     },
     {
       title: 'Статус',
-      width: 100,
-      render: () => (
-        <Badge status="success" text="Активна" />
-      )
+      width: 90,
+      align: 'center',
+      render: () => <Badge status="success" text="Активна" />
     },
     {
       title: 'Действия',
       align: 'center',
       fixed: 'right',
-      width: 120,
+      width: 100,
       render: (_, record) => (
         <SettingsActionButtons
-          onEdit={() => showEditModal(record)}
-          onDelete={() => onDeleteClick(record.id)}
+          onEdit={canUpdate ? () => showEditModal(record) : undefined}
+          onDelete={canDelete ? () => onDeleteClick(record.id) : undefined}
           recordName={record.name}
           deleteConfirmTitle="Удаление группы"
           isDeleting={isDestroying}
-          editTooltip="Редактировать группу"
-          deleteTooltip="Удалить группу"
         />
       )
     }
-  ];
+  ], [token, getShiftTypeColor, getShiftNumberColor, canUpdate, canDelete, isDestroying, onDeleteClick, showEditModal]);
 
   const showCreateModal = () => {
     setEditingGroup(null);
@@ -269,28 +332,6 @@ const SettingsGroupPage: FC = () => {
     setSupervisorId(null);
     form.resetFields();
     setIsModalOpen(true);
-  };
-
-  const showEditModal = (group: IGroup) => {
-    setEditingGroup(group);
-    setGroupName(group.name);
-    const teamIdValue = group.team_id ?? null;
-    setTeamId(teamIdValue);
-    setShiftType(group.shift_type);
-    setShiftNumber(group.shift_number);
-    setSupervisorId(group.supervisor?.id ?? null);
-    form.setFieldsValue({
-      name: group.name,
-      team_id: group.team_id,
-      shift_type: group.shift_type,
-      shift_number: group.shift_number,
-      supervisor_id: group.supervisor?.id ?? null
-    });
-    setIsModalOpen(true);
-    // Загружаем пользователей для редактируемой группы
-    if (teamIdValue) {
-      loadUsersByTeam(teamIdValue);
-    }
   };
 
   const handleOk = async () => {
@@ -308,8 +349,8 @@ const SettingsGroupPage: FC = () => {
       setIsModalOpen(false);
       form.resetFields();
       setEditingGroup(null);
-    } catch (error) {
-      console.error('Error saving group:', error);
+      trigger(filters);
+    } catch {
       message.error(editingGroup ? 'Ошибка при обновлении группы' : 'Ошибка при создании группы');
     }
   };
@@ -323,47 +364,103 @@ const SettingsGroupPage: FC = () => {
     setShiftType(null);
     setShiftNumber(null);
     setSupervisorId(null);
-    setAllUsers([]); // Очищаем загруженных пользователей
+    setAllUsers([]);
   };
 
-  const totalGroups = groups?.length || 0;
-  const dayShiftGroups = groups?.filter(group => group.shift_type === 'День').length || 0;
-  const nightShiftGroups = groups?.filter(group => group.shift_type === 'Ночь').length || 0;
-
-  const stats = [
-    {
-      title: 'Всего групп',
-      value: totalGroups,
-      prefix: <TeamOutlined />,
-      valueStyle: { color: token.colorPrimary }
-    },
-    {
-      title: 'Дневные смены',
-      value: dayShiftGroups,
-      prefix: <span>☀️</span>,
-      valueStyle: { color: token.colorSuccess }
-    },
-    {
-      title: 'Ночные смены',
-      value: nightShiftGroups,
-      prefix: <span>🌙</span>,
-      valueStyle: { color: token.colorWarning }
-    }
-  ];
+  const handleTableChange = useCallback((pagination: { current?: number; pageSize?: number }) => {
+    setFilters({
+      page: pagination.current || 1,
+      per_page: pagination.pageSize || 10,
+    });
+  }, [setFilters]);
 
   return (
     <div className={styles.pageContainer}>
-      <SettingsPageHeader
-        title="Управление группами"
-        description="Создание и настройка рабочих групп сотрудников"
-        icon={<TeamOutlined style={{ color: token.colorPrimary }} />}
-        onCreateClick={showCreateModal}
-        onRefreshClick={() => refetch()}
-        isLoading={isGroupsFetching}
-        createButtonText="Создать группу"
-      />
+      {/* Header */}
+      <div className={styles.headerContainer} style={{ marginBottom: 12 }}>
+        <div className={styles.headerContent}>
+          <div className={styles.headerTitleSection}>
+            <Title level={3} className={styles.title} style={{ color: token.colorText, marginBottom: 4 }}>
+              <TeamOutlined style={{ color: token.colorPrimary }} />
+              Управление группами
+            </Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Настройка рабочих групп сотрудников
+            </Text>
+          </div>
+          
+          <Space size="middle">
+            {canCreate && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={showCreateModal}>
+                Создать группу
+              </Button>
+            )}
+          </Space>
+        </div>
+      </div>
 
-      <SettingsStatsCards stats={stats} />
+      {/* Filters */}
+      <Card 
+        size="small" 
+        style={{ marginBottom: 12, background: token.colorBgContainer }}
+        bodyStyle={{ padding: 12 }}
+      >
+        <Flex justify="space-between" align="center" gap={16} wrap="wrap">
+          <Flex gap={16} align="center" style={{ flex: 1 }} wrap="wrap">
+            <Input
+              placeholder="Поиск по названию..."
+              prefix={<SearchOutlined />}
+              allowClear
+              style={{ width: 220 }}
+              value={localFilters.search}
+              onChange={(e) => setLocalFilters(prev => ({ ...prev, search: e.target.value }))}
+              onPressEnter={handleApplyFilters}
+            />
+            <Select
+              placeholder="Все отделы"
+              allowClear
+              style={{ width: 180 }}
+              value={localFilters.team_id}
+              onChange={(val) => setLocalFilters(prev => ({ ...prev, team_id: val }))}
+              loading={isTeamsLoading}
+              options={teams?.map(t => ({ value: t.id, label: t.name }))}
+            />
+            <Select
+              placeholder="Тип смены"
+              allowClear
+              style={{ width: 140 }}
+              value={localFilters.shift_type}
+              onChange={(val) => setLocalFilters(prev => ({ ...prev, shift_type: val }))}
+              options={[
+                { value: 'День', label: '☀️ День' },
+                { value: 'Ночь', label: '🌙 Ночь' },
+              ]}
+            />
+          </Flex>
+          <Space>
+            <Button 
+              type="primary" 
+              icon={<CheckOutlined />} 
+              onClick={handleApplyFilters}
+              loading={isFetching}
+            >
+              Применить
+            </Button>
+            <Button 
+              icon={<ReloadOutlined />} 
+              onClick={() => trigger(filters)} 
+              loading={isFetching}
+            >
+              Обновить
+            </Button>
+            {hasActiveFilters && (
+              <Button icon={<ClearOutlined />} onClick={handleResetFilters}>
+                Сбросить
+              </Button>
+            )}
+          </Space>
+        </Flex>
+      </Card>
 
       <GroupModal
         open={isModalOpen}
@@ -382,46 +479,49 @@ const SettingsGroupPage: FC = () => {
         supervisorId={supervisorId}
         onSupervisorIdChange={setSupervisorId}
         teams={teams}
-        users={users}
+        users={allUsers}
         isLoadingTeams={isTeamsLoading}
         isLoadingUsers={isLoadingUsers}
         isSubmitting={isCreating || isUpdating}
       />
 
+      {/* Table */}
       <Card 
+        size="small"
         title={
-          <Space>
-            <TeamOutlined />
-            <span>Список групп</span>
-            <Badge 
-              count={totalGroups} 
-              showZero 
-              style={{ backgroundColor: token.colorPrimary }} 
-            />
+          <Space size="small">
+            <TeamOutlined style={{ fontSize: 14 }} />
+            <span style={{ fontSize: 14 }}>Список групп</span>
+            {hasActiveFilters && (
+              <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>Фильтры активны</Tag>
+            )}
           </Space>
         }
         extra={
-          <Text type="secondary">
-            {isGroupsFetching ? 'Обновление...' : `Обновлено: ${new Date().toLocaleTimeString()}`}
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            Всего: {meta?.total ?? 0}
           </Text>
         }
+        style={{ background: token.colorBgContainer }}
+        bodyStyle={{ padding: 12 }}
       >
         <Table<IGroup>
           columns={columns} 
           dataSource={groups} 
           rowKey="id"
-          loading={isGroupsLoading || isGroupsFetching}
-          scroll={{ x: 800 }}
+          loading={isLoading || isFetching}
+          scroll={{ x: 'max-content' }}
           size="small"
-          bordered
           pagination={{
+            current: meta?.current_page || 1,
+            pageSize: meta?.per_page || 10,
+            total: meta?.total || 0,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => 
-              `Показано ${range[0]}-${range[1]} из ${total} групп`,
-            pageSize: 10,
-            pageSizeOptions: ['10', '20', '50']
+            showTotal: (total, range) => `${range[0]}-${range[1]} из ${total}`,
+            pageSizeOptions: ['10', '20', '50'],
           }}
+          onChange={(pagination) => handleTableChange(pagination)}
         />
       </Card>
     </div>

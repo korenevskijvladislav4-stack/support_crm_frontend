@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, Form, Input, Select, Typography, Divider } from 'antd';
 import { TeamOutlined, SafetyCertificateOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import type { ITeam, ITeamForm } from '../../../types/teams.type';
+import type { ITeam, ITeamForm } from '../../../types/team.types';
 import type { IRole } from '../../../types/role.types';
 import { theme } from 'antd';
 import styles from '../../../styles/settings/settings-modals.module.css';

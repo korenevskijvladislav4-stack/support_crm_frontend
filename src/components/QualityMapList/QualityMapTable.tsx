@@ -5,11 +5,11 @@ import { theme } from 'antd';
 const { Title, Text } = Typography;
 
 import type { TableColumnsType } from 'antd';
-import type { QualityMapListItem } from '../../types/quality.types';
+import type { IQualityMapListItem } from '../../types/quality.types';
 
 interface QualityMapTableProps {
-  columns: TableColumnsType<QualityMapListItem>;
-  data: QualityMapListItem[];
+  columns: TableColumnsType<IQualityMapListItem>;
+  data: IQualityMapListItem[];
   loading: boolean;
   filters: { page: number; per_page: number; search?: string; team_id?: number; status: string };
   meta?: { total?: number };

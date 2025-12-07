@@ -30,8 +30,8 @@ import {
   CloseCircleOutlined,
   FolderOutlined
 } from '@ant-design/icons';
-import { useGetCriteriaQuery, useCreateDeductionMutation, useUpdateQualityMapChatIdsMutation } from '../../api/qualityApi';
-import type { QualityMap, QualityCriterion, QualityDeduction } from '../../types/quality.types';
+import { useCreateDeductionMutation, useUpdateQualityMapChatIdsMutation } from '../../api/qualityApi';
+import type { QualityMap, QualityDeduction, IQualityMapCriterion } from '../../types/quality.types';
 import { formatDate } from '../../utils/dateUtils';
 import DeductionModal from './DeductionModal';
 import EditChatModal from './EditChatModal';
@@ -40,6 +40,7 @@ const { Text } = Typography;
 
 interface QualityTableProps {
   qualityMap: QualityMap;
+  readOnly?: boolean;
 }
 
 interface SelectedCell {
@@ -73,13 +74,10 @@ interface QualityTableRow {
   [key: string]: unknown;
 }
 
-const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
+const QualityTable: React.FC<QualityTableProps> = ({ qualityMap, readOnly = false }) => {
   const { token } = theme.useToken();
   const isDark = token.colorBgBase === '#0d1117';
-  const { data: allCriteria = [] } = useGetCriteriaQuery(
-  { team_id: qualityMap.team_id }, // Добавляем фильтр по команде
-  { skip: !qualityMap?.team_id }
-);
+  const allCriteria = useMemo<IQualityMapCriterion[]>(() => qualityMap.criteria || [], [qualityMap.criteria]);
   const [createDeduction, { isLoading: isCreatingDeduction }] = useCreateDeductionMutation();
   const [updateChatIds, { isLoading: isUpdatingChats }] = useUpdateQualityMapChatIdsMutation();
   
@@ -92,8 +90,8 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
   const [deductionForm] = Form.useForm<DeductionFormValues>();
   const [editChatForm] = Form.useForm<EditChatModalValues>();
 
-  // Инициализируем 15 чатов если их нет
-  const chatIds = qualityMap?.chat_ids || Array(15).fill('');
+  // Инициализируем количество чатов согласно карте (если нет — пустой массив)
+  const chatIds = Array.isArray(qualityMap?.chat_ids) ? qualityMap.chat_ids : [];
 
   // Группируем снятия по критериям и чатам для быстрого доступа
   const deductionsMap = useMemo(() => {
@@ -131,7 +129,8 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
       
       let totalDeduction = 0;
       allCriteria.forEach(criterion => {
-        const deductionKey = `${criterion.id}_${chatId}`;
+        const criterionKey = criterion.criteria_id ?? criterion.id;
+        const deductionKey = `${criterionKey}_${chatId}`;
         const deduction = deductionsMap.get(deductionKey);
         if (deduction && typeof deduction.deduction === 'number') {
           totalDeduction += deduction.deduction;
@@ -363,145 +362,59 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
       },
     },
     ...chatIds.map((chatId, chatIndex) => {
-      const chatStats = chatTotals[chatIndex];
-      const deductionsForChat = qualityMap.deductions?.filter(d => d.chat_id === chatId) || [];
-      const commentsCount = deductionsForChat.filter(d => d.comment).length;
-      const totalDeductions = deductionsForChat.reduce((sum, d) => 
-        sum + (typeof d.deduction === 'number' ? d.deduction : 0), 0
-      );
 
       return {
         title: (
-          <Popover
-            content={
-              <div style={{ maxWidth: 280 }}>
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ 
-                    fontWeight: 600, 
-                    fontSize: '14px',
-                    color: token.colorTextHeading,
-                    marginBottom: 8
-                  }}>
-                    Чат {chatIndex + 1}
-                  </div>
-                  <div style={{ 
-                    fontSize: '12px',
-                    color: token.colorTextSecondary,
-                    marginBottom: 4
-                  }}>
-                    ID: <Text strong style={{ color: token.colorText }}>{chatId || 'не указан'}</Text>
-                  </div>
-                </div>
-                
-                {chatId && chatStats && (
-                  <div style={{ 
-                    padding: '8px 12px',
-                    backgroundColor: isDark ? token.colorFillTertiary : token.colorFillQuaternary,
-                    borderRadius: 6,
-                    marginBottom: 8
-                  }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 6
-                    }}>
-                      <span style={{ fontSize: '12px', color: token.colorTextSecondary }}>Оценка:</span>
-                      <Text strong style={{ 
-                        fontSize: '16px',
-                        color: getScoreColor(chatStats.score)
-                      }}>
-                        {chatStats.score}%
-                      </Text>
-                    </div>
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 4
-                    }}>
-                      <span style={{ fontSize: '12px', color: token.colorTextSecondary }}>Снято баллов:</span>
-                      <Text style={{ fontSize: '13px', color: token.colorText }}>
-                        {totalDeductions}
-                      </Text>
-                    </div>
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <span style={{ fontSize: '12px', color: token.colorTextSecondary }}>Комментариев:</span>
-                      <Text style={{ fontSize: '13px', color: token.colorText }}>
-                        {commentsCount}
-                      </Text>
-                    </div>
-                  </div>
-                )}
-
-                {!chatId && (
-                  <div style={{ 
-                    fontSize: '12px',
-                    color: token.colorTextSecondary,
-                    fontStyle: 'italic'
-                  }}>
-                    ID чата не указан
-                  </div>
-                )}
-              </div>
-            }
-            title="Обзор чата"
-            trigger="hover"
-            placement="top"
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '2px 4px',
+            minHeight: 28,
+            backgroundColor: chatId 
+              ? (isDark ? '#162312' : '#f6ffed')
+              : (isDark ? '#3d2816' : '#fff2f0'),
+            borderRadius: 4,
+            border: `1px solid ${chatId 
+              ? (isDark ? '#3f6600' : '#b7eb8f')
+              : (isDark ? '#8b4513' : '#ffa39e')}`,
+            cursor: readOnly ? 'default' : 'pointer'
+          }}
+          onClick={readOnly ? undefined : () => handleEditChat(chatIndex)}
           >
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between', 
-              padding: '2px 4px',
-              minHeight: 28,
-              backgroundColor: chatId 
-                ? (isDark ? '#162312' : '#f6ffed')
-                : (isDark ? '#3d2816' : '#fff2f0'),
-              borderRadius: 4,
-              border: `1px solid ${chatId 
-                ? (isDark ? '#3f6600' : '#b7eb8f')
-                : (isDark ? '#8b4513' : '#ffa39e')}`,
-              cursor: 'pointer'
-            }}
-            onClick={() => handleEditChat(chatIndex)}
+            <div 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 4, 
+                flex: 1,
+                minWidth: 0,
+              }}
             >
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 4, 
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <MessageOutlined style={{ 
-                  fontSize: 10, 
-                  color: chatId ? (isDark ? '#73d13d' : '#52c41a') : (isDark ? '#ffa940' : '#ff4d4f')
-                }} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <Text 
-                    strong={!!chatId}
-                    type={chatId ? undefined : "secondary"}
-                    style={{ 
-                      fontSize: '10px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'block',
-                      color: chatId 
-                        ? (isDark ? '#73d13d' : '#389e0d')
-                        : (isDark ? '#ffa940' : '#cf1322')
-                    }}
-                  >
-                    {chatId || `Чат ${chatIndex + 1}`}
-                  </Text>
-                </div>
+              <MessageOutlined style={{ 
+                fontSize: 10, 
+                color: chatId ? (isDark ? '#73d13d' : '#52c41a') : (isDark ? '#ffa940' : '#ff4d4f')
+              }} />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <Text 
+                  strong={!!chatId}
+                  type={chatId ? undefined : "secondary"}
+                  style={{ 
+                    fontSize: '10px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    display: 'block',
+                    color: chatId 
+                      ? (isDark ? '#73d13d' : '#389e0d')
+                      : (isDark ? '#ffa940' : '#cf1322')
+                  }}
+                >
+                  {chatId || `Чат ${chatIndex + 1}`}
+                </Text>
               </div>
+            </div>
+            {!readOnly && (
               <Dropdown 
                 menu={{ items: getColumnTitleDropdownItems(chatIndex) }} 
                 trigger={['click']}
@@ -522,13 +435,13 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
                   }}
                 />
               </Dropdown>
-            </div>
-          </Popover>
+            )}
+          </div>
         ),
       dataIndex: `chat_${chatIndex}`,
       key: `chat_${chatIndex}`,
-      width: 80,
-      minWidth: 80,
+      width: 150,
+      minWidth: 150,
       align: 'center' as const,
       render: (_: unknown, record: QualityTableRow) => {
         const currentChatId = chatIds[chatIndex];
@@ -549,78 +462,28 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
           }
 
           const totalScore = chatTotals[chatIndex]?.score;
-          const totalDeduction = chatTotals[chatIndex]?.deduction || 0;
           
           return (
-            <Popover
-              content={
-                <div style={{ maxWidth: 250 }}>
-                  <div style={{ marginBottom: 8 }}>
-                    <Text strong style={{ fontSize: '14px', color: token.colorText }}>
-                      Итоговая оценка
-                    </Text>
-                  </div>
-                  <div style={{ 
-                    padding: '8px 12px',
-                    backgroundColor: isDark ? token.colorFillTertiary : token.colorFillQuaternary,
-                    borderRadius: 6,
-                    marginBottom: 8
-                  }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 6
-                    }}>
-                      <span style={{ fontSize: '12px', color: token.colorTextSecondary }}>Оценка:</span>
-                      <Text strong style={{ 
-                        fontSize: '18px',
-                        color: getScoreColor(totalScore)
-                      }}>
-                        {totalScore}%
-                      </Text>
-                    </div>
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <span style={{ fontSize: '12px', color: token.colorTextSecondary }}>Снято баллов:</span>
-                      <Text style={{ fontSize: '13px', color: token.colorError }}>
-                        {totalDeduction}
-                      </Text>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '11px', color: token.colorTextSecondary, fontStyle: 'italic' }}>
-                    Максимальная оценка: 100%
-                  </div>
-                </div>
-              }
-              title="Детали итоговой оценки"
-              trigger="hover"
-              placement="top"
-            >
+            <div style={{ 
+              padding: '4px 2px',
+              backgroundColor: token.colorBgContainer,
+              borderRadius: '4px',
+              border: `1px solid ${getScoreColor(totalScore)}`,
+              margin: '0 1px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
               <div style={{ 
-                padding: '4px 2px',
-                backgroundColor: token.colorBgContainer,
-                borderRadius: '4px',
-                border: `1px solid ${getScoreColor(totalScore)}`,
-                margin: '0 1px',
-                height: '28px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
+                fontSize: '12px', 
+                fontWeight: 'bold',
+                color: getScoreColor(totalScore),
+                textAlign: 'center'
               }}>
-                <div style={{ 
-                  fontSize: '12px', 
-                  fontWeight: 'bold',
-                  color: getScoreColor(totalScore),
-                  textAlign: 'center'
-                }}>
-                  {totalScore}%
-                </div>
+                {totalScore}%
               </div>
-            </Popover>
+            </div>
           );
         }
 
@@ -639,11 +502,11 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: 'pointer'
+                cursor: readOnly ? 'default' : 'pointer'
               }}
-              onClick={() => handleEditChat(chatIndex)}
+              onClick={readOnly ? undefined : () => handleEditChat(chatIndex)}
             >
-              <EditOutlined style={{ fontSize: 10 }} />
+              {readOnly ? '—' : <EditOutlined style={{ fontSize: 10 }} />}
             </div>
           );
         }
@@ -664,11 +527,11 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: 'pointer'
+                cursor: readOnly ? 'default' : 'pointer'
               }}
-              onClick={() => handleEditChat(chatIndex)}
+              onClick={readOnly ? undefined : () => handleEditChat(chatIndex)}
             >
-              <EditOutlined style={{ fontSize: 10 }} />
+              {readOnly ? '—' : <EditOutlined style={{ fontSize: 10 }} />}
             </div>
           );
         }
@@ -694,9 +557,9 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
               alignItems: 'center',
               justifyContent: 'center',
               position: 'relative',
-              cursor: 'pointer',
+              cursor: readOnly ? 'default' : 'pointer',
             }}
-            onClick={() => id && handleCellClick(id, chatIndex, deduction)}
+            onClick={readOnly ? undefined : () => id && handleCellClick(id, chatIndex, deduction)}
           >
             <div style={{ 
               fontSize: '11px', 
@@ -761,9 +624,10 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
 
   // Группируем критерии по категориям
   const groupedCriteria = useMemo(() => {
-    const groups = new Map<string, QualityCriterion[]>();
+    const groups = new Map<string, IQualityMapCriterion[]>();
+    const list = Array.isArray(filteredCriteria) ? filteredCriteria : [];
     
-    filteredCriteria.forEach((criterion: QualityCriterion) => {
+    list.forEach((criterion: IQualityMapCriterion) => {
       const categoryKey = criterion.category?.id?.toString() || 'no_category';
       
       if (!groups.has(categoryKey)) {
@@ -793,18 +657,18 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
       const categoryName = firstCriterion.category?.name || 'Без категории';
 
       // Добавляем критерии этой категории с информацией о категории
-      criteria.forEach((criterion: QualityCriterion, criterionIndex) => {
+      criteria.forEach((criterion: IQualityMapCriterion, criterionIndex) => {
         const isFirstInCategory = criterionIndex === 0;
         const isLastInCategory = criterionIndex === criteria.length - 1;
         const isLastCategory = categoryIndex === sortedCategories.length - 1;
         
         rows.push({
           key: `criteria_${criterion.id}`,
-          id: criterion.id,
+          id: criterion.criteria_id ?? criterion.id,
           name: criterion.name || 'Неизвестный критерий',
           description: criterion.description ?? undefined,
           isTotal: false,
-          categoryId: criterion.category_id ?? null,
+          categoryId: criterion.category?.id ?? null,
           categoryName: categoryName,
           isFirstInCategory,
           isLastInCategory,
@@ -928,7 +792,7 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
               <Space size="small">
                 <CalendarOutlined style={{ color: token.colorTextTertiary, fontSize: 14 }} />
                 <Text type="secondary" style={{ fontSize: '13px' }}>
-                  {formatDate(qualityMap.start_date)} - {formatDate(qualityMap.end_date)}
+                  {formatDate(qualityMap.period.start)} - {formatDate(qualityMap.period.end)}
                 </Text>
               </Space>
             </Space>
@@ -946,7 +810,7 @@ const QualityTable: React.FC<QualityTableProps> = ({ qualityMap }) => {
               <Space size={4}>
                 <MessageOutlined style={{ color: token.colorTextTertiary, fontSize: 14 }} />
                 <Text type="secondary" style={{ fontSize: '13px' }}>
-                  {qualityStats.filledChats}/15
+                  {qualityStats.filledChats}/{chatIds.length}
                 </Text>
               </Space>
               

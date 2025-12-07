@@ -270,7 +270,7 @@ const EditUserPage: FC = () => {
             onFormChange={(field, value) => {
               if (field === 'team_id') {
                 const newTeam = teams?.find(t => t.id === value);
-                const newTeamRoleIds = newTeam?.roles.map(r => r.id) || [];
+                const newTeamRoleIds = newTeam?.roles?.map(r => r.id) || [];
                 const validRoles = userForm.roles.filter(roleId => newTeamRoleIds.includes(roleId));
                 setUserForm(prev => ({ ...prev, team_id: value as number | null, roles: validRoles }));
               } else if (field === 'group_id') {

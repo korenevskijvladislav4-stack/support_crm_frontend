@@ -4,7 +4,7 @@ import type {
   IShiftRequest,
   ICreateShiftRequest,
   ICreateDirectShiftRequest
-} from '../types/shifts.types';
+} from '../types/shift.types';
 
 export const shiftRequestApi = createApi({
     reducerPath: 'shiftRequestApi',

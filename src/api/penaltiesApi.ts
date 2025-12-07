@@ -38,7 +38,7 @@ export const penaltiesApi = createApi({
         updatePenalty: builder.mutation<IPenalty, { id: number; form: IPenaltyForm }>({
             query: ({ id, form }) => ({
                 url: `/penalties/${id}`,
-                method: 'PATCH',
+                method: 'PUT',
                 body: form
             }),
             invalidatesTags: ['Penalties'],

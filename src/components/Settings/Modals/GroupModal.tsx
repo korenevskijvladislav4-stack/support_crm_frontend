@@ -1,8 +1,8 @@
 import React from 'react';
 import { Modal, Form, Input, Select, Typography, Divider, Row, Col } from 'antd';
 import { TeamOutlined, UserOutlined, ClockCircleOutlined, CalendarOutlined, ExclamationCircleOutlined, CrownOutlined } from '@ant-design/icons';
-import type { IGroup, IGroupForm } from '../../../types/groups.types';
-import type { ITeam } from '../../../types/teams.type';
+import type { IGroup, IGroupForm } from '../../../types/group.types';
+import type { ITeam } from '../../../types/team.types';
 import type { IUser } from '../../../types/user.types';
 import { theme } from 'antd';
 import styles from '../../../styles/settings/settings-modals.module.css';

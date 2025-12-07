@@ -8,12 +8,12 @@ import {
   Button, 
   Tag, 
   Popconfirm,
-  Card,
-  Table,
   Badge,
   theme,
   Tabs,
-  type TableColumnsType
+  Card,
+  type TableColumnsType,
+  Table
 } from 'antd';
 import { 
   EyeOutlined, 
@@ -34,28 +34,63 @@ import {
 } from '../../api/qualityApi';
 import { useGetAllGroupsQuery } from '../../api/groupsApi';
 import { useLazyAllUsersQuery } from '../../api/usersApi';
-import type { QualityMapListItem, QualityMapsFilter } from '../../types/quality.types';
+import { usePermissions } from '../../hooks/usePermissions';
+import { useUrlFilters } from '../../hooks/useUrlFilters';
+import { PERMISSIONS } from '../../constants/permissions';
+import type { IQualityMapListItem, IQualityMapsFilter } from '../../types/quality.types';
 import type { IUser } from '../../types/user.types';
 import { formatDate } from '../../utils/dateUtils';
+import { handleApiError } from '../../utils/errorHandler';
 import QualityMapFilters from './QualityMapFilters';
 import QualityMapPageHeader from './QualityMapPageHeader';
 import styles from '../../styles/users/users-page.module.css';
 
 const { Text } = Typography;
 
+type QualityMapTab = 'all' | 'active' | 'completed';
+
+// Дефолтные значения фильтров
+const defaultFilters = {
+  search: undefined as string | undefined,
+  team_id: undefined as number | undefined,
+  user_id: undefined as number | undefined,
+  group_id: undefined as number | undefined,
+  checker_id: undefined as number | undefined,
+  start_date: undefined as string | undefined,
+  status: 'all' as QualityMapTab,
+  page: 1,
+  per_page: 10,
+};
+
+// Парсеры для URL фильтров (статичные)
+const qualityMapFilterParsers = {
+  team_id: (val: string) => val ? Number(val) : undefined,
+  user_id: (val: string) => val ? Number(val) : undefined,
+  group_id: (val: string) => val ? Number(val) : undefined,
+  checker_id: (val: string) => val ? Number(val) : undefined,
+  page: (val: string) => Number(val) || 1,
+  per_page: (val: string) => Number(val) || 10,
+  status: (val: string) => (val || 'all') as QualityMapTab,
+};
+
 const QualityMapsListPage: React.FC = () => {
   const { token } = theme.useToken();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed'>('all');
-  const [filters, setFilters] = useState<QualityMapsFilter>({
-    search: undefined,
-    team_id: undefined,
-    group_id: undefined,
-    checker_id: undefined,
-    start_date: undefined,
-    page: 1,
-    per_page: 10,
+  const { hasPermission } = usePermissions();
+  
+  // Permissions
+  const canCreate = hasPermission(PERMISSIONS.QUALITY_MAPS_CREATE);
+  const canUpdate = hasPermission(PERMISSIONS.QUALITY_MAPS_UPDATE);
+  const canDelete = hasPermission(PERMISSIONS.QUALITY_MAPS_DELETE);
+
+  // Фильтры с сохранением в URL
+  const { filters: urlFilters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters({
+    defaults: defaultFilters,
+    parsers: qualityMapFilterParsers,
   });
+
+  const activeTab = urlFilters.status;
+  const filters: IQualityMapsFilter = urlFilters;
 
   // Добавляем статус в фильтры на основе активного таба
   const filtersWithStatus = useMemo(() => ({
@@ -63,9 +98,13 @@ const QualityMapsListPage: React.FC = () => {
     status: activeTab === 'all' ? undefined : activeTab,
   }), [filters, activeTab]);
 
-  const { data: qualityMapsResponse, isLoading, isFetching, refetch } = useGetQualityMapsQuery(filtersWithStatus);
-  const { data: teams } = useGetTeamsQuery();
-  const { data: groups } = useGetAllGroupsQuery();
+  const { data: qualityMapsResponse, isLoading, isFetching, refetch, isError: isMapsError, error: mapsError } = useGetQualityMapsQuery(filtersWithStatus);
+  const { data: teamsData } = useGetTeamsQuery();
+  const { data: groupsData } = useGetAllGroupsQuery();
+  
+  // Нормализуем данные (на случай если API вернул объект с data)
+  const teams = Array.isArray(teamsData) ? teamsData : (teamsData as unknown as { data: typeof teamsData })?.data || [];
+  const groups = Array.isArray(groupsData) ? groupsData : (groupsData as unknown as { data: typeof groupsData })?.data || [];
   const [getUsers] = useLazyAllUsersQuery();
   const [deleteQualityMap] = useDeleteQualityMapMutation();
   const [allUsers, setAllUsers] = useState<IUser[]>([]);
@@ -79,8 +118,13 @@ const QualityMapsListPage: React.FC = () => {
     let currentPage = 1;
     let hasMore = true;
     const perPage = 100; // Максимальное значение, разрешенное сервером
+    const MAX_PAGES = 10; // Чтобы не блокировать UI при большом количестве пользователей
     
     while (hasMore) {
+      if (currentPage > MAX_PAGES) {
+        message.warning('Загружены первые 1000 пользователей. Уточните фильтры для списка проверяющих.');
+        break;
+      }
       try {
         const response = await getUsers({ 
           full_name: null,
@@ -109,6 +153,7 @@ const QualityMapsListPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Error loading users:', error);
+        handleApiError(error, 'Не удалось загрузить список проверяющих');
         hasMore = false;
       }
     }
@@ -122,6 +167,12 @@ const QualityMapsListPage: React.FC = () => {
     loadAllUsers();
   }, [loadAllUsers]);
 
+  React.useEffect(() => {
+    if (isMapsError) {
+      handleApiError(mapsError, 'Не удалось загрузить карты качества');
+    }
+  }, [isMapsError, mapsError]);
+
   const checkers = useMemo(() => {
     return allUsers.map(user => ({
       id: user.id,
@@ -130,32 +181,18 @@ const QualityMapsListPage: React.FC = () => {
     }));
   }, [allUsers]);
 
-  const handleApplyFilters = useCallback((newFilters: QualityMapsFilter) => {
-    setFilters(prev => ({
-      ...prev,
-      ...newFilters,
-      page: 1,
-    }));
-  }, []);
+  const handleApplyFilters = useCallback((newFilters: IQualityMapsFilter) => {
+    setFilters({ ...newFilters, page: 1 });
+  }, [setFilters]);
 
   const handleTabChange = useCallback((key: string) => {
-    const newStatus = key as 'all' | 'active' | 'completed';
-    setActiveTab(newStatus);
-    setFilters(prev => ({ ...prev, page: 1 }));
-  }, []);
+    const newStatus = key as QualityMapTab;
+    setFilters({ status: newStatus, page: 1 });
+  }, [setFilters]);
 
   const handleResetFilters = useCallback(() => {
-    const resetFilters: QualityMapsFilter = {
-      search: undefined,
-      team_id: undefined,
-      group_id: undefined,
-      checker_id: undefined,
-      start_date: undefined,
-      page: 1,
-      per_page: filters.per_page || 10,
-    };
-    setFilters(resetFilters);
-  }, [filters.per_page]);
+    resetUrlFilters();
+  }, [resetUrlFilters]);
 
   const handleDelete = useCallback(async (id: number) => {
     try {
@@ -168,13 +205,9 @@ const QualityMapsListPage: React.FC = () => {
     }
   }, [deleteQualityMap, refetch]);
 
-  const handleTableChange = useCallback((pagination: { current: number; pageSize: number }) => {
-    setFilters(prev => ({
-      ...prev,
-      page: pagination.current,
-      per_page: pagination.pageSize,
-    }));
-  }, []);
+  const handleTableChange = useCallback((pagination: { current?: number; pageSize?: number }) => {
+    setFilters({ page: pagination.current || 1, per_page: pagination.pageSize || filters.per_page || 10 });
+  }, [setFilters, filters.per_page]);
 
   const hasActiveFilters = useMemo((): boolean => {
     return !!(
@@ -200,15 +233,17 @@ const QualityMapsListPage: React.FC = () => {
     return '#cf1322';
   }, []);
 
-  const columns: TableColumnsType<QualityMapListItem> = useMemo(() => [
+  const columns: TableColumnsType<IQualityMapListItem> = useMemo(() => [
     {
       title: 'Сотрудник',
-      dataIndex: 'user_name',
-      key: 'user_name',
+      dataIndex: 'user',
+      key: 'user',
       align: 'center',
       fixed: 'left',
       width: 200,
-      render: (name: string, record: QualityMapListItem) => (
+      render: (_: unknown, record: IQualityMapListItem) => {
+        const fullName = `${record.user.name}${record.user.surname ? ` ${record.user.surname}` : ''}`;
+        return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
           <div style={{
             width: 32,
@@ -223,48 +258,52 @@ const QualityMapsListPage: React.FC = () => {
             fontWeight: 'bold',
             flexShrink: 0
           }}>
-            {name?.[0]?.toUpperCase()}
+            {fullName?.[0]?.toUpperCase()}
           </div>
           <div style={{ textAlign: 'left', minWidth: 0 }}>
-            <div style={{ fontWeight: 500, fontSize: 13, lineHeight: 1.4 }}>{name}</div>
+            <div style={{ fontWeight: 500, fontSize: 13, lineHeight: 1.4 }}>{fullName}</div>
             <Text type="secondary" style={{ fontSize: 11, lineHeight: 1.3 }}>
               <TeamOutlined style={{ marginRight: 4 }} />
-              {record.team_name}
+              {record.team.name}
             </Text>
           </div>
         </div>
-      ),
+        );
+      },
     },
     {
       title: 'Период проверки',
       key: 'period',
       align: 'center',
       width: 200,
-      render: (_: unknown, record: QualityMapListItem) => (
+      render: (_: unknown, record: IQualityMapListItem) => (
         <Text style={{ fontSize: 13 }}>
-          {formatDate(record.start_date)} - {formatDate(record.end_date)}
+          {formatDate(record.period.start)} - {formatDate(record.period.end)}
         </Text>
       ),
     },
     {
       title: 'Проверяющий',
-      dataIndex: 'checker_name',
-      key: 'checker_name',
+      dataIndex: 'checker',
+      key: 'checker',
       align: 'center',
       width: 180,
-      render: (name: string) => (
+      render: (_: unknown, record: IQualityMapListItem) => {
+        const fullName = `${record.checker.name}${record.checker.surname ? ` ${record.checker.surname}` : ''}`;
+        return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
           <UserOutlined style={{ color: token.colorPrimary, fontSize: 14 }} />
-          <Text style={{ fontSize: 13 }}>{name}</Text>
+          <Text style={{ fontSize: 13 }}>{fullName}</Text>
         </div>
-      ),
+        );
+      },
     },
     {
       title: 'Статус',
       key: 'status',
       align: 'center',
       width: 130,
-      render: (_: unknown, record: QualityMapListItem) => (
+      render: (_: unknown, record: IQualityMapListItem) => (
         <Tag 
           color={record.status === 'active' ? 'processing' : 'success'}
           icon={record.status === 'active' ? <ReloadOutlined /> : <ExclamationCircleOutlined />}
@@ -279,19 +318,19 @@ const QualityMapsListPage: React.FC = () => {
       key: 'checked',
       align: 'center',
       width: 150,
-      render: (_: unknown, record: QualityMapListItem) => (
+      render: (_: unknown, record: IQualityMapListItem) => (
         <Space direction="vertical" size={2} style={{ margin: 0 }}>
           <div>
             <Text type="secondary" style={{ fontSize: 11 }}>Чаты: </Text>
             <Text strong style={{ fontSize: 12 }}>
-              {record.checked_chats}/{record.total_chats}
+              {record.progress.chats.checked}/{record.progress.chats.total}
             </Text>
           </div>
-          {record.total_calls > 0 && (
+          {record.progress.calls.total > 0 && (
             <div>
               <Text type="secondary" style={{ fontSize: 11 }}>Звонки: </Text>
               <Text strong style={{ fontSize: 12 }}>
-                {record.checked_calls}/{record.total_calls}
+                {record.progress.calls.checked}/{record.progress.calls.total}
               </Text>
             </div>
           )}
@@ -299,29 +338,25 @@ const QualityMapsListPage: React.FC = () => {
       ),
     },
     {
-      title: 'Общий балл',
-      dataIndex: 'total_score',
-      key: 'total_score',
+      title: 'Оценка',
+      dataIndex: 'score',
+      key: 'score',
       align: 'center',
-      width: 120,
+      width: 90,
       render: (score: number) => (
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '4px 10px',
-          borderRadius: 6,
-          backgroundColor: getScoreColor(score) + '15',
-          border: `1px solid ${getScoreColor(score)}40`
-        }}>
-          <Text strong style={{ 
-            fontSize: 14, 
-            color: getScoreColor(score),
-            fontWeight: 600
-          }}>
-            {score}%
-          </Text>
-        </div>
+        <Tag 
+          color={getScoreColor(score)}
+          style={{ 
+            margin: 0, 
+            fontSize: 11, 
+            padding: '2px 8px',
+            borderRadius: 6,
+            border: `1px solid ${getScoreColor(score)}33`,
+            background: `${getScoreColor(score)}15`,
+          }}
+        >
+          {score ?? 0}%
+        </Tag>
       ),
     },
     {
@@ -330,7 +365,7 @@ const QualityMapsListPage: React.FC = () => {
       align: 'center',
       fixed: 'right',
       width: 150,
-      render: (_: unknown, record: QualityMapListItem) => (
+      render: (_: unknown, record: IQualityMapListItem) => (
         <Space size="small">
           <Tooltip 
             title="Просмотр"
@@ -348,31 +383,9 @@ const QualityMapsListPage: React.FC = () => {
               style={{ color: '#1890ff' }}
             />
           </Tooltip>
-          <Tooltip 
-            title="Редактировать"
-            overlayInnerStyle={{ 
-              backgroundColor: token.colorBgElevated,
-              color: token.colorText,
-              border: `1px solid ${token.colorBorder}`
-            }}
-          >
-            <Button 
-              type="text"
-              icon={<EditOutlined />} 
-              size="small" 
-              onClick={() => navigate(`/quality/${record.id}/edit`)}
-              style={{ color: '#1890ff' }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Удаление карты качества"
-            description="Вы уверены, что хотите удалить эту карту качества?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Да"
-            cancelText="Отмена"
-          >
+          {canUpdate && (
             <Tooltip 
-              title="Удалить"
+              title="Редактировать"
               overlayInnerStyle={{ 
                 backgroundColor: token.colorBgElevated,
                 color: token.colorText,
@@ -381,16 +394,42 @@ const QualityMapsListPage: React.FC = () => {
             >
               <Button 
                 type="text"
-                icon={<DeleteOutlined />} 
+                icon={<EditOutlined />} 
                 size="small" 
-                danger
+                onClick={() => navigate(`/quality/${record.id}/edit`)}
+                style={{ color: '#1890ff' }}
               />
             </Tooltip>
-          </Popconfirm>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Удаление карты качества"
+              description="Вы уверены, что хотите удалить эту карту качества?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Да"
+              cancelText="Отмена"
+            >
+              <Tooltip 
+                title="Удалить"
+                overlayInnerStyle={{ 
+                  backgroundColor: token.colorBgElevated,
+                  color: token.colorText,
+                  border: `1px solid ${token.colorBorder}`
+                }}
+              >
+                <Button 
+                  type="text"
+                  icon={<DeleteOutlined />} 
+                  size="small" 
+                  danger
+                />
+              </Tooltip>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
-  ], [navigate, handleDelete, getScoreColor, token]);
+  ], [navigate, handleDelete, getScoreColor, token, canUpdate, canDelete]);
 
   return (
     <div className={styles.pageContainer}>
@@ -398,6 +437,7 @@ const QualityMapsListPage: React.FC = () => {
         onResetFilters={handleResetFilters}
         onRefetch={refetch}
         hasActiveFilters={hasActiveFilters}
+        canCreate={canCreate}
       />
 
       <QualityMapFilters
@@ -412,7 +452,6 @@ const QualityMapsListPage: React.FC = () => {
         onRefetch={refetch}
       />
 
-      {/* Таблица */}
       <Card 
         size="small"
         title={
@@ -476,7 +515,8 @@ const QualityMapsListPage: React.FC = () => {
           size="small"
           style={{ marginBottom: 12 }}
         />
-        <Table<QualityMapListItem>
+
+        <Table<IQualityMapListItem>
           size="small"
           dataSource={qualityMaps} 
           columns={columns} 

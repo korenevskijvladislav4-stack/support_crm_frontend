@@ -2,13 +2,13 @@ import React from 'react';
 import { Button, Flex, Typography, Popconfirm } from 'antd';
 import { EditOutlined, StopOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
-import type { IUser } from '../../types/user.types';
+import type { IUser, IUserProfileFull } from '../../types/user.types';
 import styles from '../../styles/users/user-profile.module.css';
 
 const { Title, Text } = Typography;
 
 interface UserProfileHeaderProps {
-  user: IUser | undefined;
+  user: IUser | IUserProfileFull | undefined;
   userId: number | null;
   onDeactivate: () => Promise<void>;
   isDeactivating: boolean;

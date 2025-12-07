@@ -2,7 +2,7 @@ import { type FC } from "react";
 import { Card, Segmented, Select, DatePicker, Button, Flex, theme } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
-import type { ITeam } from "../../types/teams.type";
+import type { ITeam } from "../../types/team.types";
 import type { IScheduleFilterForm } from "../../types/schedule.types";
 
 const { Option } = Select;

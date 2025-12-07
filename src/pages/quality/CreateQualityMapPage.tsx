@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, Row, Col, Steps, Form, message } from 'antd';
 import type { RangePickerProps } from 'antd/es/date-picker';
 import dayjs from 'dayjs';
@@ -26,8 +26,17 @@ interface QualityMapFormValues {
 const CreateQualityMap: React.FC<CreateQualityMapProps> = ({  onCancel }) => {
   const [form] = Form.useForm<QualityMapFormValues>();
   const [createQualityMap, { isLoading }] = useCreateQualityMapMutation();
-  const { data: teams } = useGetTeamsQuery();
+  const { data: teamsData } = useGetTeamsQuery();
   const { data: criteria = [] } = useGetCriteriaQuery({});
+  
+  // Нормализуем данные teams (на случай если API вернул объект с data)
+  const teams = useMemo(() => {
+    if (Array.isArray(teamsData)) return teamsData;
+    if (teamsData && typeof teamsData === 'object' && 'data' in teamsData) {
+      return (teamsData as { data: typeof teamsData }).data;
+    }
+    return [];
+  }, [teamsData]);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   
@@ -36,12 +45,13 @@ const CreateQualityMap: React.FC<CreateQualityMapProps> = ({  onCancel }) => {
   });
   
   // Убеждаемся, что users это массив
-  const users = React.useMemo(() => {
+  const users = useMemo(() => {
     return Array.isArray(usersData) ? usersData : [];
   }, [usersData]);
 
+  // Запрещаем выбор будущих дат (проверки только за прошедшие периоды)
   const disabledDate: RangePickerProps['disabledDate'] = (current) => {
-    return current && current < dayjs().startOf('day');
+    return current && current > dayjs().endOf('day');
   };
   const navigate = useNavigate();
 
@@ -55,7 +65,12 @@ const CreateQualityMap: React.FC<CreateQualityMapProps> = ({  onCancel }) => {
         chat_count: values.chat_count,
         calls_count: values.calls_count || 0,
       }).unwrap();
-      navigate(`/quality/${result.data.id}/edit`);
+      const newId = (result as any)?.data?.id ?? (result as any)?.id;
+      if (newId) {
+        navigate(`/quality/${newId}/edit`);
+      } else {
+        message.error('Не удалось определить ID созданной карты');
+      }
     } catch (error) {
       console.error('Error creating quality map:', error);
       message.error('Ошибка при создании карты качества');
@@ -79,10 +94,18 @@ const CreateQualityMap: React.FC<CreateQualityMapProps> = ({  onCancel }) => {
   const selectedUser = Array.isArray(users) ? users.find(user => user.id === formValues?.user_id) : undefined;
   const selectedTeamData = Array.isArray(teams) ? teams.find(team => team.id === formValues?.team_id) : undefined;
 
-  // Получаем критерии для выбранной команды
-  const teamCriteria = criteria.filter(criterion => 
+  // Получаем критерии для выбранной команды (нормализуем ответ: может быть {data: []})
+  const criteriaList = useMemo(() => {
+    if (Array.isArray(criteria)) return criteria;
+    if (criteria && typeof criteria === 'object' && 'data' in criteria && Array.isArray((criteria as any).data)) {
+      return (criteria as any).data;
+    }
+    return [];
+  }, [criteria]);
+
+  const teamCriteria = criteriaList.filter((criterion: any) => 
     criterion.is_global || 
-    (criterion.teams && criterion.teams.some(team => team.id === selectedTeam))
+    (criterion.teams && criterion.teams.some((team: any) => team.id === selectedTeam))
   );
 
   const steps = [

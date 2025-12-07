@@ -1,11 +1,11 @@
 import React from 'react';
 import { Card, Form, Input, Select, Divider, Row, Col, Space, Typography } from 'antd';
 import { UserOutlined, MailOutlined, PhoneOutlined, TeamOutlined, SafetyCertificateOutlined, CalendarOutlined } from '@ant-design/icons';
-import type { IAttemptForm } from '../../types/attempts.types';
-import type { ITeam } from '../../types/teams.type';
-import type { IGroup } from '../../types/groups.types';
+import type { IAttemptForm } from '../../types/attempt.types';
+import type { ITeam } from '../../types/team.types';
+import type { IGroup } from '../../types/group.types';
 import type { IRole } from '../../types/role.types';
-import type { IScheduleType } from '../../types/schedule-type.types';
+import type { IScheduleType } from '../../types/schedule.types';
 import styles from '../../styles/attempts/attempt-approve.module.css';
 
 const { Text } = Typography;
@@ -101,7 +101,7 @@ const AttemptApproveForm: React.FC<AttemptApproveFormProps> = ({
                 value={form.team_id}
                 onChange={(value) => {
                   const newTeam = teams?.find(t => t.id === value);
-                  const newTeamRoleIds = newTeam?.roles.map(r => r.id) || [];
+                  const newTeamRoleIds = newTeam?.roles?.map(r => r.id) || [];
                   const validRoles = form.roles.filter(roleId => newTeamRoleIds.includes(roleId));
                   
                   onFormChange('team_id', value);

@@ -9,18 +9,29 @@ import {
   ClockCircleOutlined, 
   CalendarOutlined 
 } from '@ant-design/icons';
-import type { IUser } from '../../types/user.types';
+import type { IUser, IUserProfileFull } from '../../types/user.types';
 import { theme } from 'antd';
 import styles from '../../styles/users/user-profile.module.css';
 
 const { Title, Text } = Typography;
 
 interface UserProfileInfoProps {
-  user: IUser | undefined;
+  user: IUser | IUserProfileFull | undefined;
 }
 
 const UserProfileInfo: React.FC<UserProfileInfoProps> = ({ user }) => {
   const { token } = theme.useToken();
+
+  const roles: { id: number | string; name: string }[] = Array.isArray((user as IUserProfileFull)?.roles)
+    ? (user as IUserProfileFull).roles!.map((r) => ({ id: r.id, name: r.name }))
+    : Array.isArray((user as IUser)?.roles)
+      ? (user as IUser).roles.map((name, idx) => ({ id: idx, name }))
+      : [];
+  const groupLabel = typeof user?.group === 'string' ? user.group : user?.group?.name;
+  const teamLabel = typeof user?.team === 'string' ? user.team : user?.team?.name;
+  const scheduleTypeLabel = typeof (user as IUser)?.schedule_type === 'string'
+    ? (user as IUser)?.schedule_type
+    : (user as IUserProfileFull)?.schedule_type?.name;
 
   const items = [
     {
@@ -76,17 +87,17 @@ const UserProfileInfo: React.FC<UserProfileInfoProps> = ({ user }) => {
       ),
       children: (
         <Flex gap={4} wrap="wrap">
-          {user?.roles?.map((role, index) => (
+          {roles.map((role) => (
             <Tag 
-              key={index} 
+              key={role.id} 
               color={
-                role === 'admin' ? 'red' : 
-                role === 'manager' ? 'blue' : 
-                role === 'supervisor' ? 'orange' : 'green'
+                role.name === 'admin' ? 'red' : 
+                role.name === 'manager' ? 'blue' : 
+                role.name === 'supervisor' ? 'orange' : 'green'
               }
               icon={<SafetyCertificateOutlined />}
             >
-              {role}
+              {role.name}
             </Tag>
           ))}
         </Flex>
@@ -100,11 +111,11 @@ const UserProfileInfo: React.FC<UserProfileInfoProps> = ({ user }) => {
           Группа
         </Text>
       ),
-      children: (
+      children: groupLabel ? (
         <Tag color="blue" icon={<TeamOutlined />}>
-          {user?.group}
+          {groupLabel}
         </Tag>
-      ),
+      ) : <Text type="secondary">Не указана</Text>,
     },
     {
       key: '6',
@@ -114,11 +125,11 @@ const UserProfileInfo: React.FC<UserProfileInfoProps> = ({ user }) => {
           Отдел
         </Text>
       ),
-      children: (
+      children: teamLabel ? (
         <Tag color="green" icon={<TeamOutlined />}>
-          {user?.team}
+          {teamLabel}
         </Tag>
-      ),
+      ) : <Text type="secondary">Не указан</Text>,
     },
     {
       key: '7',
@@ -130,13 +141,10 @@ const UserProfileInfo: React.FC<UserProfileInfoProps> = ({ user }) => {
       ),
       children: (
         <Badge 
-          status={user?.schedule_type === 'День' ? 'success' : 'processing'} 
+          status={scheduleTypeLabel === 'День' ? 'success' : 'processing'} 
           text={
             <Text strong>
-              {user?.schedule_type} 
-              <Text type="secondary" style={{ marginLeft: 8 }}>
-                (9:00 - 18:00)
-              </Text>
+              {scheduleTypeLabel || 'Не указан'}
             </Text>
           } 
         />
@@ -163,6 +171,7 @@ const UserProfileInfo: React.FC<UserProfileInfoProps> = ({ user }) => {
         </span>
       }
       className={styles.infoCard}
+      style={{ minHeight: 520 }}
     >
       <Descriptions 
         items={items} 

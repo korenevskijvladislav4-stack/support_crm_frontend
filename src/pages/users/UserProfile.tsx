@@ -1,42 +1,37 @@
-import { useState } from "react";
-import { 
-  Button, 
-  Card, 
-  Flex, 
-  Spin, 
+import { useState, useCallback, useMemo, type FC } from "react";
+import {
+  Button,
+  Card,
+  Flex,
+  Spin,
   Statistic,
   Row,
   Col,
-  List,
-  Avatar,
-  Timeline,
   Typography,
   Tag,
   Empty,
   theme,
-  message
+  message,
+  Space,
+  Input,
 } from "antd";
-import type { FC } from "react"
 import {
   CheckCircleOutlined,
-  FireOutlined,
-  StarOutlined,
-  TrophyOutlined,
-  HistoryOutlined,
   ClockCircleOutlined,
-  BarChartOutlined,
-  EyeOutlined,
   FileTextOutlined,
-  CalendarOutlined
-} from '@ant-design/icons';
-import { UserProfileHeader, UserProfileInfo, UserProfileStats, UserProfileSkills } from '../../components/Users';
-import { Link, useParams, useNavigate } from "react-router-dom";
-import { useGetShowUserQuery, useDeactivateUserMutation } from "../../api/usersApi";
+  FieldTimeOutlined,
+  WarningOutlined,
+  MessageOutlined,
+  PlusCircleOutlined,
+} from "@ant-design/icons";
+import { UserProfileHeader, UserProfileInfo } from "../../components/Users";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import {
+  useGetUserFullQuery,
+  useDeactivateUserMutation,
+  useAddUserProfileCommentMutation,
+} from "../../api/usersApi";
 import { skipToken } from "@reduxjs/toolkit/query";
-import { useGetQualityMapsQuery } from "../../api/qualityApi";
-import { useGetScheduleQuery } from "../../api/scheduleApi";
-import { formatDate } from "../../utils/dateUtils";
-import dayjs from "dayjs";
 
 const { Text } = Typography;
 
@@ -45,71 +40,41 @@ const UserProfile: FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const userId = id ? parseInt(id) : null;
-  const { data: user, isLoading } = useGetShowUserQuery(id ?? skipToken);
+
+  const { data: profile, isLoading, refetch } = useGetUserFullQuery(id ?? skipToken);
   const [deactivateUser, { isLoading: isDeactivating }] = useDeactivateUserMutation();
-  
-  // Получаем карточки качества пользователя
-  const { data: qualityMapsResponse, isLoading: isLoadingQualityMaps } = useGetQualityMapsQuery(
-    { 
-      user_id: userId ?? undefined,
-      per_page: 5,
-      sort_direction: 'desc',
-      sort_field: 'created_at'
-    },
-    { skip: !userId }
-  );
-  const qualityMaps = qualityMapsResponse?.data || [];
+  const [addComment, { isLoading: isAddingComment }] = useAddUserProfileCommentMutation();
+  const [newComment, setNewComment] = useState("");
 
-  // Получаем график пользователя
-  const currentDate = new Date();
-  const { data: schedule, isLoading: isLoadingSchedule } = useGetScheduleQuery(
-    {
-      month: currentDate.toISOString().slice(0, 7),
-      team_id: user?.team_id || null,
-      shift_type: "День",
-    },
-    { skip: !user?.team_id || !userId }
-  );
+  const currentMonthLabel = useMemo(() => {
+    const date = new Date();
+    const label = date.toLocaleString("ru-RU", { month: "long", year: "numeric" });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }, []);
 
-  // Вычисляем статистику по графику
-  const userShifts = schedule?.groups
-    ?.flatMap(group => group.users || [])
-    ?.find(u => u.id === userId)?.shifts || [];
-  
-  const totalHours = userShifts.reduce((sum, shift) => sum + (shift.duration || 0), 0);
-  const totalShifts = userShifts.length;
-  
-  // Проверяем, есть ли график вообще (даже если у пользователя нет смен)
-  const hasSchedule = schedule && schedule.groups && schedule.groups.length > 0;
-  
-  // Фальшивые данные для демонстрации
-  const [userStats] = useState({
-    qualityScore: 87,
-    completedTasks: 142,
-    avgResponseTime: '2.4 мин',
-    satisfactionRate: 94,
-    workedHours: '1,240',
-    currentStreak: 12
-  });
+  const user = profile;
+  const deductions = useMemo(() => user?.deductions || [], [user]);
+  const penalties = user?.penalties;
+  const schedule = user?.schedule;
+  const comments = user?.comments || [];
+  const penaltiesList = user?.penalties_list || [];
+  const qualityMaps = user?.quality_maps || [];
 
-  const [recentActivities] = useState([
-    { time: '2024-01-15 14:30', action: 'Завершил проверку качества', status: 'success' },
-    { time: '2024-01-15 11:20', action: 'Обновил личные данные', status: 'info' },
-    { time: '2024-01-14 16:45', action: 'Прошел обучение', status: 'success' },
-    { time: '2024-01-14 09:15', action: 'Начал новую смену', status: 'processing' },
-  ]);
-
-  const [skills] = useState([
-    { name: 'Коммуникация', level: 90 },
-    { name: 'Технические знания', level: 85 },
-    { name: 'Решение проблем', level: 88 },
-    { name: 'Работа в команде', level: 92 },
-  ]);
-
+  const handleAddComment = useCallback(async () => {
+    if (!userId || !newComment.trim()) return;
+    try {
+      await addComment({ userId, comment: newComment.trim() }).unwrap();
+      setNewComment("");
+      message.success("Комментарий добавлен");
+      refetch();
+    } catch {
+      message.error("Не удалось добавить комментарий");
+    }
+  }, [addComment, newComment, userId, refetch]);
 
   if (isLoading) {
     return (
-      <Flex vertical gap={10} justify="center" align="center" style={{ height: '100vh' }}>
+      <Flex vertical gap={10} justify="center" align="center" style={{ height: "100vh" }}>
         <Spin size="large" />
         <Text type="secondary">Загрузка профиля пользователя...</Text>
       </Flex>
@@ -117,7 +82,7 @@ const UserProfile: FC = () => {
   }
 
   return (
-    <div style={{ padding: 'clamp(12px, 2vw, 24px)', maxWidth: '100%', margin: '0 auto' }}>
+    <div style={{ padding: "clamp(12px, 2vw, 24px)", maxWidth: "100%", margin: "0 auto" }}>
       <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
         <Col xs={24}>
           <UserProfileHeader
@@ -127,10 +92,10 @@ const UserProfile: FC = () => {
               if (!userId) return;
               try {
                 await deactivateUser(userId).unwrap();
-                message.success('Пользователь успешно деактивирован');
-                navigate('/users');
+                message.success("Пользователь успешно деактивирован");
+                navigate("/users");
               } catch {
-                message.error('Ошибка при деактивации пользователя');
+                message.error("Ошибка при деактивации пользователя");
               }
             }}
             isDeactivating={isDeactivating}
@@ -140,305 +105,228 @@ const UserProfile: FC = () => {
 
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={16}>
-          <UserProfileInfo user={user} />
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <UserProfileInfo user={user} />
 
-          <Row gutter={[24, 24]}>
-            <Col xs={24} lg={12}>
-              <UserProfileStats
-                qualityScore={userStats.qualityScore}
-                satisfactionRate={userStats.satisfactionRate}
-                avgResponseTime={userStats.avgResponseTime}
-              />
-            </Col>
-
-            <Col xs={24} lg={12}>
-              <UserProfileSkills skills={skills} />
-            </Col>
-          </Row>
+            {/* Комментарии под основной информацией */}
+            <Card
+              size="small"
+              title={
+                <span>
+                  <MessageOutlined style={{ marginRight: 8, color: token.colorPrimary }} />
+                  Комментарии
+                </span>
+              }
+              extra={
+                <Space>
+                  <Input.TextArea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Оставьте комментарий..."
+                    autoSize={{ minRows: 2, maxRows: 4 }}
+                    maxLength={1000}
+                    style={{ width: 420, background: token.colorFillTertiary }}
+                  />
+                  <Button
+                    type="primary"
+                    icon={<PlusCircleOutlined />}
+                    loading={isAddingComment}
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim()}
+                  >
+                    Добавить
+                  </Button>
+                </Space>
+              }
+              bodyStyle={{ paddingTop: 12 }}
+            >
+              {comments.length > 0 ? (
+                <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                  {comments.map((comment) => (
+                    <Card key={comment.id} size="small" style={{ borderColor: token.colorBorderSecondary }}>
+                      <Flex justify="space-between" align="center">
+                        <Text strong>
+                          {comment.author?.full_name || `${comment.author?.name || ""} ${comment.author?.surname || ""}`}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: 11 }}>
+                          {comment.created_at?.slice(0, 16).replace("T", " ")}
+                        </Text>
+                      </Flex>
+                      <div style={{ marginTop: 8, fontSize: 13 }}>{comment.comment}</div>
+                    </Card>
+                  ))}
+                </Space>
+              ) : (
+                <Empty description="Комментариев нет" />
+              )}
+            </Card>
+          </Space>
         </Col>
 
-        {/* Боковая панель */}
+        {/* Сайдбар справа */}
         <Col xs={24} lg={8}>
-          {/* Карточки качества */}
-          <Card 
-            title={
-              <span>
-                <FileTextOutlined style={{ marginRight: 8, color: token.colorPrimary }} />
-                Карточки качества
-              </span>
-            }
-            style={{ marginBottom: 24 }}
-            loading={isLoadingQualityMaps}
-          >
-            {qualityMaps.length > 0 ? (
-              <List
-                dataSource={qualityMaps}
-                size="small"
-                renderItem={(qualityMap) => {
-                  // Используем total_score из API
-                  const finalScore = qualityMap.total_score ?? 0;
-                  
-                  const getScoreColor = (score: number) => {
-                    if (score >= 90) return token.colorSuccess;
-                    if (score >= 70) return token.colorWarning;
-                    return token.colorError;
-                  };
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <Card
+              size="small"
+              title={
+                <span>
+                  <ClockCircleOutlined style={{ marginRight: 8, color: token.colorPrimary }} />
+                  График за месяц
+                </span>
+              }
+              extra={
+                <Button type="link" size="small" onClick={() => navigate(`/schedule`)}>
+                  Открыть график
+                </Button>
+              }
+            >
+              <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                <Flex align="center" gap={8} style={{ color: token.colorTextTertiary, fontSize: 12 }}>
+                  <FieldTimeOutlined />
+                  <Text type="secondary">Месяц: {currentMonthLabel}</Text>
+                </Flex>
+                <Flex gap={12} wrap>
+                  <Statistic title="Смен" value={schedule?.current_month_shifts ?? 0} suffix="шт" />
+                  <Statistic title="Часы за месяц" value={schedule?.current_month_hours ?? 0} suffix="ч" />
+                  <Statistic title="Часы всего" value={schedule?.total_hours ?? 0} suffix="ч" />
+                </Flex>
+              </Space>
+            </Card>
 
-                  return (
-                    <List.Item
-                      style={{
-                        padding: '12px',
-                        marginBottom: 8,
-                        border: `1px solid ${token.colorBorderSecondary}`,
-                        borderRadius: 6,
-                        backgroundColor: token.colorBgContainer,
-                        transition: 'all 0.2s',
-                        cursor: 'pointer'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = token.colorFillTertiary;
-                        e.currentTarget.style.borderColor = token.colorPrimary;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = token.colorBgContainer;
-                        e.currentTarget.style.borderColor = token.colorBorderSecondary;
-                      }}
-                    >
-                      <Link to={`/quality/${qualityMap.id}`} style={{ width: '100%', textDecoration: 'none' }}>
-                        <Flex vertical gap={8} style={{ width: '100%' }}>
-                          <Flex justify="space-between" align="center">
-                            <Text strong style={{ fontSize: 13, color: token.colorText }}>
-                              Карта #{qualityMap.id}
-                            </Text>
-                            <Tag 
-                              color={qualityMap.status === 'completed' ? 'success' : 'processing'}
-                              style={{ margin: 0 }}
-                            >
-                              {qualityMap.status === 'completed' ? 'Завершена' : 'Активна'}
-                            </Tag>
-                          </Flex>
-                          
-                          <Flex justify="space-between" align="center">
-                            <Text type="secondary" style={{ fontSize: 11 }}>
-                              <CalendarOutlined style={{ marginRight: 4 }} />
-                              {formatDate(qualityMap.start_date)} - {formatDate(qualityMap.end_date)}
-                            </Text>
-                          </Flex>
-                          
-                          <Flex justify="space-between" align="center">
-                            <Flex align="center" gap={4}>
-                              <BarChartOutlined style={{ fontSize: 12, color: getScoreColor(finalScore) }} />
-                              <Text style={{ fontSize: 12, color: token.colorTextSecondary }}>
-                                Оценка:
-                              </Text>
-                              <Text strong style={{ fontSize: 14, color: getScoreColor(finalScore) }}>
-                                {finalScore}%
-                              </Text>
-                            </Flex>
-                            <Button 
-                              type="link" 
-                              size="small" 
-                              icon={<EyeOutlined />}
-                              style={{ padding: 0, height: 'auto' }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Просмотр
-                            </Button>
-                          </Flex>
+            <Card
+              size="small"
+              title={
+                <span>
+                  <WarningOutlined style={{ marginRight: 8, color: token.colorPrimary }} />
+                  Штрафы
+                </span>
+              }
+              extra={
+                <Button type="link" size="small" onClick={() => navigate(`/penalties?user_id=${userId || ""}`)}>
+                  Все штрафы
+                </Button>
+              }
+            >
+              <Flex gap={12} wrap>
+                <Statistic title="Штрафы (шт)" value={penalties?.count ?? 0} suffix="шт" />
+                <Statistic title="Штрафы (часы)" value={penalties?.hours ?? 0} suffix="ч" />
+              </Flex>
+              <div style={{ marginTop: 12 }}>
+                {penaltiesList.length > 0 ? (
+                  <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                    {penaltiesList.map((p) => (
+                      <Card key={p.id} size="small" style={{ borderColor: token.colorBorderSecondary }}>
+                        <Flex justify="space-between" align="center">
+                          <Text strong style={{ fontSize: 12 }}>
+                            {p.violation_date?.slice(0, 10) || "—"}
+                          </Text>
+                          <Tag color={p.status === "approved" ? "green" : p.status === "pending" ? "orange" : "red"} style={{ margin: 0 }}>
+                            {p.status}
+                          </Tag>
                         </Flex>
-                      </Link>
-                    </List.Item>
-                  );
-                }}
-              />
-            ) : (
-              <Empty 
-                description="Нет карточек качества" 
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                style={{ padding: '20px 0' }}
-              />
-            )}
-          </Card>
+                        <Flex justify="space-between" align="center" style={{ marginTop: 4 }}>
+                          <Text type="secondary" style={{ fontSize: 12 }}>Часы к снятию</Text>
+                          <Tag color="volcano" style={{ margin: 0, fontSize: 12 }}>
+                            {p.hours_to_deduct ?? 0} ч
+                          </Tag>
+                        </Flex>
+                      </Card>
+                    ))}
+                  </Space>
+                ) : (
+                  <Empty description="Нет штрафов" />
+                )}
+              </div>
+            </Card>
 
-          {/* График работы */}
-          <Card 
-            title={
-              <span>
-                <ClockCircleOutlined style={{ marginRight: 8, color: token.colorPrimary }} />
-                График работы
-              </span>
-            }
-            style={{ marginBottom: 24 }}
-            loading={isLoadingSchedule}
-          >
-            {!user?.team_id ? (
-              <Empty 
-                description="У пользователя не указана команда" 
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                style={{ padding: '20px 0' }}
-              />
-            ) : hasSchedule ? (
-              <Flex vertical gap={12}>
-                <Row gutter={[16, 16]}>
-                  <Col span={12}>
-                    <Statistic
-                      title="Всего смен"
-                      value={totalShifts}
-                      prefix={<CalendarOutlined />}
-                      valueStyle={{ color: token.colorPrimary, fontSize: 20 }}
-                    />
-                  </Col>
-                  <Col span={12}>
-                    <Statistic
-                      title="Часов работы"
-                      value={totalHours}
-                      prefix={<ClockCircleOutlined />}
-                      valueStyle={{ color: token.colorSuccess, fontSize: 20 }}
-                    />
-                  </Col>
-                </Row>
-                
-                <div style={{ 
-                  padding: '12px',
-                  backgroundColor: token.colorFillTertiary,
-                  borderRadius: 6,
-                  border: `1px solid ${token.colorBorderSecondary}`
-                }}>
-                  <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                    Период: {dayjs(currentDate.toISOString().slice(0, 7)).format('MMMM YYYY')}
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Тип смен: День
-                  </Text>
+            <Card
+              size="small"
+              title={
+                <span>
+                  <FileTextOutlined style={{ marginRight: 8, color: token.colorPrimary }} />
+                  Снятия по критериям
+                </span>
+              }
+            >
+              {deductions.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {deductions.map((item) => (
+                    <Flex
+                      key={item.criterion.id}
+                      align="center"
+                      justify="space-between"
+                      style={{ border: `1px solid ${token.colorBorderSecondary}`, borderRadius: 6, padding: 10 }}
+                    >
+                      <div>
+                        <Text strong>{item.criterion.name || "Критерий"}</Text>
+                      </div>
+                      <Space size={8}>
+                        <Tag icon={<FieldTimeOutlined />} color="volcano" style={{ margin: 0, fontSize: 12 }}>
+                          {item.total_deduction} б.
+                        </Tag>
+                        <Tag icon={<CheckCircleOutlined />} color="blue" style={{ margin: 0, fontSize: 12 }}>
+                          {item.count} шт
+                        </Tag>
+                      </Space>
+                    </Flex>
+                  ))}
                 </div>
+              ) : (
+                <Empty description="Нет данных по снятиям" />
+              )}
+            </Card>
 
-                <Link to="/schedule">
-                  <Button type="primary" block icon={<EyeOutlined />}>
-                    Посмотреть график
-                  </Button>
-                </Link>
-              </Flex>
-            ) : (
-              <Empty 
-                description="График не сформирован" 
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                style={{ padding: '20px 0' }}
-              />
-            )}
-          </Card>
-
-          {/* Статистика в цифрах */}
-          <Card style={{ marginBottom: 24 }}>
-            <Row gutter={[16, 16]}>
-              <Col xs={12}>
-                <Statistic
-                  title="Выполнено задач"
-                  value={userStats.completedTasks}
-                  prefix={<CheckCircleOutlined />}
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Col>
-              <Col xs={12}>
-                <Statistic
-                  title="Часов работы"
-                  value={userStats.workedHours}
-                  prefix={<ClockCircleOutlined />}
-                  valueStyle={{ color: '#1890ff' }}
-                />
-              </Col>
-              <Col xs={12}>
-                <Statistic
-                  title="Текущая серия"
-                  value={userStats.currentStreak}
-                  suffix="дней"
-                  prefix={<FireOutlined />}
-                  valueStyle={{ color: '#ff4d4f' }}
-                />
-              </Col>
-              <Col xs={12}>
-                <Statistic
-                  title="Рейтинг"
-                  value={4.8}
-                  precision={1}
-                  prefix={<StarOutlined />}
-                  valueStyle={{ color: '#faad14' }}
-                />
-              </Col>
-            </Row>
-          </Card>
-
-          {/* Последние активности */}
-          <Card 
-            title={
-              <span>
-                <HistoryOutlined style={{ marginRight: 8, color: '#722ed1' }} />
-                Последние действия
-              </span>
-            }
-          >
-            <Timeline>
-              {recentActivities.map((activity, index) => (
-                <Timeline.Item
-                  key={index}
-                  color={
-                    activity.status === 'success' ? 'green' :
-                    activity.status === 'processing' ? 'blue' : 'gray'
-                  }
-                >
-                  <div>
-                    <Text strong>{activity.action}</Text>
-                    <br />
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {activity.time}
-                    </Text>
-                  </div>
-                </Timeline.Item>
-              ))}
-            </Timeline>
-          </Card>
-
-          {/* Достижения */}
-          <Card 
-            title={
-              <span>
-                <TrophyOutlined style={{ marginRight: 8, color: '#faad14' }} />
-                Достижения
-              </span>
-            }
-          >
-            <Flex vertical gap={12}>
-              <Flex align="center" gap={12}>
-                <Avatar 
-                  size={40} 
-                  icon={<TrophyOutlined />} 
-                  style={{ backgroundColor: '#ffd666', color: '#d48806' }}
-                />
-                <div>
-                  <Text strong>Лучший сотрудник месяца</Text>
-                  <br />
-                  <Text type="secondary" style={{ fontSize: 12 }}>Декабрь 2023</Text>
-                </div>
-              </Flex>
-              
-              <Flex align="center" gap={12}>
-                <Avatar 
-                  size={40} 
-                  icon={<StarOutlined />} 
-                  style={{ backgroundColor: '#b7eb8f', color: '#389e0d' }}
-                />
-                <div>
-                  <Text strong>100% качество</Text>
-                  <br />
-                  <Text type="secondary" style={{ fontSize: 12 }}>5 раз подряд</Text>
-                </div>
-              </Flex>
-            </Flex>
-          </Card>
+            <Card
+              size="small"
+              title={
+                <span>
+                  <FileTextOutlined style={{ marginRight: 8, color: token.colorPrimary }} />
+                  Карты качества
+                </span>
+              }
+              extra={
+                <Button type="link" size="small" onClick={() => navigate(`/quality?user_id=${userId || ""}`)}>
+                  Открыть все
+                </Button>
+              }
+            >
+              {qualityMaps.length > 0 ? (
+                <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                  {qualityMaps.map((map) => (
+                    <Card key={map.id} size="small" style={{ borderColor: token.colorBorderSecondary }}>
+                      <Flex justify="space-between" align="center">
+                        <div>
+                          <Text strong>Период</Text>
+                          <div style={{ fontSize: 12, color: token.colorTextSecondary }}>
+                            {map.period?.start || "—"} — {map.period?.end || "—"}
+                          </div>
+                        </div>
+                        <Tag color={map.status === "completed" ? "success" : "processing"} style={{ margin: 0 }}>
+                          {map.status === "completed" ? "Завершена" : "Активна"}
+                        </Tag>
+                      </Flex>
+                      <Flex justify="space-between" align="center" style={{ marginTop: 8 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>Средний балл</Text>
+                        <Tag color={map.score >= 90 ? "green" : map.score >= 70 ? "orange" : "red"} style={{ margin: 0 }}>
+                          {map.score}%
+                        </Tag>
+                      </Flex>
+                      <div style={{ marginTop: 8 }}>
+                        <Link to={`/quality/${map.id}`}>Открыть карту</Link>
+                      </div>
+                    </Card>
+                  ))}
+                </Space>
+              ) : (
+                <Empty description="Нет карт качества" />
+              )}
+            </Card>
+          </Space>
         </Col>
       </Row>
     </div>
   );
 };
 
-
 export default UserProfile;
+

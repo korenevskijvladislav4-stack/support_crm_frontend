@@ -1,16 +1,25 @@
-// app/api/authApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithReauth } from './baseQueries/baseQueryWithReauth';
-import type { ITeamForm, ITeam } from '../types/teams.type';
+import type { ITeamForm, ITeam, ITeamFilters, TeamsResponse } from '../types/team.types';
 
 export const teamsApi = createApi({
     reducerPath: 'teamsApi',
     baseQuery: baseQueryWithReauth,
     tagTypes: ['Teams'],
     endpoints: (builder) => ({
+        // Получить список с пагинацией и фильтрами
+        getTeams: builder.query<TeamsResponse, ITeamFilters>({
+            query: (params) => ({
+                url: '/teams',
+                params
+            }),
+            providesTags: ['Teams']
+        }),
+        // Получить все команды без пагинации (для селектов)
         getAllTeams: builder.query<ITeam[], void>({
             query: () => ({
                 url: '/teams',
+                params: { all: true }
             }),
             providesTags: ['Teams']
         }),
@@ -40,4 +49,11 @@ export const teamsApi = createApi({
     }),
 });
 
-export const { useGetAllTeamsQuery, useCreateTeamMutation, useUpdateTeamMutation, useDestroyTeamMutation } = teamsApi
+export const { 
+    useGetTeamsQuery,
+    useLazyGetTeamsQuery,
+    useGetAllTeamsQuery, 
+    useCreateTeamMutation, 
+    useUpdateTeamMutation, 
+    useDestroyTeamMutation 
+} = teamsApi;

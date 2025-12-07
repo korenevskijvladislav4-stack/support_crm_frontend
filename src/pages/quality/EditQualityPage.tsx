@@ -1,10 +1,11 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Space, Spin, Alert, Button } from 'antd';
+import { Spin, Alert, Button, Space } from 'antd';
 import { QualityMapHeader, QualityMapInfo } from '../../components/EditQualityMap';
 import QualityTable from '../../components/QualityTable/QualityTable';
 import QualityCallsTable from '../../components/QualityTable/QualityCallsTable';
 import { useGetQualityMapQuery } from '../../api/qualityApi';
+import styles from '../../styles/users/users-page.module.css';
 
 const EditQualityMapPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,14 +20,13 @@ const EditQualityMapPage: React.FC = () => {
     navigate('/quality');
   };
 
-  const handleViewMode = () => {
+  const handleToggleMode = () => {
     navigate(`/quality/${qualityMapId}`);
   };
 
   if (isLoading) {
     return (
-      <div style={{ 
-        padding: 'clamp(12px, 2vw, 24px)', 
+      <div className={styles.pageContainer} style={{ 
         display: 'flex', 
         justifyContent: 'center', 
         alignItems: 'center', 
@@ -39,7 +39,7 @@ const EditQualityMapPage: React.FC = () => {
 
   if (error || !qualityMap) {
     return (
-      <div style={{ padding: 'clamp(12px, 2vw, 24px)', maxWidth: '100%', margin: '0 auto' }}>
+      <div className={styles.pageContainer}>
         <Alert
           message="Ошибка загрузки"
           description="Не удалось загрузить карту качества. Проверьте правильность идентификатора или попробуйте обновить страницу."
@@ -61,26 +61,29 @@ const EditQualityMapPage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: 'clamp(12px, 2vw, 24px)', maxWidth: '100%', margin: '0 auto' }}>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        {/* Заголовок с навигацией */}
-        <QualityMapHeader 
-          qualityMap={qualityMap}
-          onBack={handleBack}
-          onViewMode={handleViewMode}
-        />
+    <div className={styles.pageContainer}>
+      {/* Заголовок с навигацией */}
+      <QualityMapHeader 
+        qualityMap={qualityMap}
+        mode="edit"
+        onBack={handleBack}
+        onToggleMode={handleToggleMode}
+      />
 
-        {/* Информация о карте */}
-        <QualityMapInfo qualityMap={qualityMap} />
+      {/* Информация о карте */}
+      <div style={{ marginBottom: 16 }}>
+        <QualityMapInfo qualityMap={qualityMap} mode="edit" />
+      </div>
 
-        {/* Таблица качества - Чаты */}
-        <QualityTable qualityMap={qualityMap} />
+      {/* Таблица качества - Чаты */}
+      <QualityTable qualityMap={qualityMap} />
 
-        {/* Таблица качества - Звонки */}
-        {qualityMap.calls_count && qualityMap.calls_count > 0 && (
+      {/* Таблица качества - Звонки */}
+      {qualityMap.progress?.calls.total > 0 && (
+        <div style={{ marginTop: 16 }}>
           <QualityCallsTable qualityMap={qualityMap} />
-        )}
-      </Space>
+        </div>
+      )}
     </div>
   );
 };

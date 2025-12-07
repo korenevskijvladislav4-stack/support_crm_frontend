@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Modal, Form, Input, Select, Switch, InputNumber, Typography, Divider, Alert, Button, message } from 'antd';
 import { StarOutlined, GlobalOutlined, TeamOutlined, PlusOutlined, FolderOutlined } from '@ant-design/icons';
-import type { IQualityCriteria, CriterionFormValues } from '../../../types/qualityCriterias.types';
-import type { ITeam } from '../../../types/teams.type';
+import type { IQualityCriteria, ICriterionFormValues } from '../../../types/quality-criteria.types';
+import type { ITeam } from '../../../types/team.types';
 import styles from '../../../styles/settings/settings-modals.module.css';
 import { 
   useGetAllQualityCriteriaCategoriesQuery, 
@@ -15,9 +15,9 @@ const { TextArea } = Input;
 interface QualityCriteriaModalProps {
   open: boolean;
   editingCriterion: IQualityCriteria | null;
-  onOk: (values: CriterionFormValues) => Promise<void>;
+  onOk: (values: ICriterionFormValues) => Promise<void>;
   onCancel: () => void;
-  form: ReturnType<typeof Form.useForm<CriterionFormValues>>[0];
+  form: ReturnType<typeof Form.useForm<ICriterionFormValues>>[0];
   teams?: ITeam[];
   isLoadingTeams: boolean;
   isSubmitting: boolean;
@@ -40,7 +40,7 @@ const QualityCriteriaModal: React.FC<QualityCriteriaModalProps> = ({
   const { data: categories, isLoading: isLoadingCategories } = useGetAllQualityCriteriaCategoriesQuery();
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateQualityCriteriaCategoryMutation();
 
-  const handleFormSubmit = async (values: CriterionFormValues) => {
+  const handleFormSubmit = async (values: ICriterionFormValues) => {
     await onOk(values);
   };
 

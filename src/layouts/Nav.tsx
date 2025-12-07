@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   LineChartOutlined,
+  FieldTimeOutlined,
   LogoutOutlined,
   NumberOutlined,
   PlusOutlined,
@@ -21,6 +22,8 @@ import styles from "../styles/nav-layout.module.css"
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSignOutMutation } from '../api/authApi';
 import { useTypedSelector } from '../hooks/store';
+import { usePermissions } from '../hooks/usePermissions';
+import { PERMISSIONS } from '../constants/permissions';
 
 const { Content, Sider } = Layout;
 const { Text } = Typography;
@@ -37,6 +40,7 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const currentUser = useTypedSelector((state) => state.auth.user);
+  const { hasPermission, hasAnyPermission } = usePermissions();
 
   const onSignOutClick = async() => {
     await signOut().unwrap();
@@ -44,84 +48,157 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
     navigate('/login');
   };
 
-  const menuItems: MenuProps['items'] = [
-    {
-      key: '/users',
-      icon: <SolutionOutlined style={{ fontSize: '16px' }} />,
-      label: <Link to='/users'>Пользователи</Link>,
-      className: location.pathname === '/users' ? 'ant-menu-item-selected' : '',
-    },
-    {
-      key: '/attempts',
-      icon: <PlusOutlined style={{ fontSize: '16px' }} />,
-      label: <Link to="/attempts">Регистрация</Link>,
-      className: location.pathname === '/attempts' ? 'ant-menu-item-selected' : '',
-    },
-    {
-      key: '/schedule',
-      icon: <NumberOutlined style={{ fontSize: '16px' }} />,
-      label: <Link to="/schedule">График смен</Link>,
-      className: location.pathname === '/schedule' ? 'ant-menu-item-selected' : '',
-    },
-    {
-      key: '/groups',
-      icon: <TeamOutlined style={{ fontSize: '16px' }} />,
-      label: <Link to="/groups">Группы</Link>,
-      className: location.pathname === '/groups' ? 'ant-menu-item-selected' : '',
-    },
-    {
-      key: '/qualities',
-      icon: <LineChartOutlined style={{ fontSize: '16px' }} />,
-      label: <Link to="/quality">Качество</Link>,
-      className: location.pathname === '/quality' ? 'ant-menu-item-selected' : '',
-    },
-    {
-      key: '/penalties',
-      icon: <ExclamationCircleOutlined style={{ fontSize: '16px' }} />,
-      label: <Link to="/penalties">Штрафная таблица</Link>,
-      className: location.pathname === '/penalties' ? 'ant-menu-item-selected' : '',
-    },
-    {
-      key: '/reports',
-      icon: <BarChartOutlined style={{ fontSize: '16px' }} />,
-      label: <Link to="/reports">Отчеты</Link>,
-      className: location.pathname === '/reports' ? 'ant-menu-item-selected' : '',
-    },
-    {
-      type: 'divider',
-      style: { 
-        margin: '8px 0', 
-        borderColor: isDarkMode ? '#303030' : '#f0f0f0' 
-      },
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined style={{ fontSize: '16px' }} />,
-      label: 'Настройки системы',
-      children: [
-        {
+  // Генерация меню на основе permissions
+  const menuItems: MenuProps['items'] = useMemo(() => {
+    const items: MenuProps['items'] = [];
+
+    // Пользователи (список)
+    if (hasPermission(PERMISSIONS.USERS_VIEW)) {
+      items.push({
+        key: '/users',
+        icon: <SolutionOutlined style={{ fontSize: '16px' }} />,
+        label: <Link to='/users'>Пользователи</Link>,
+      });
+    }
+
+    // Заявки на регистрацию
+    if (hasPermission(PERMISSIONS.ATTEMPTS_VIEW)) {
+      items.push({
+        key: '/attempts',
+        icon: <PlusOutlined style={{ fontSize: '16px' }} />,
+        label: <Link to="/attempts">Регистрация</Link>,
+      });
+    }
+
+    // График смен
+    if (hasPermission(PERMISSIONS.SCHEDULE_VIEW)) {
+      items.push({
+        key: '/schedule',
+        icon: <NumberOutlined style={{ fontSize: '16px' }} />,
+        label: <Link to="/schedule">График смен</Link>,
+      });
+    }
+
+    // Качество
+    if (hasAnyPermission([PERMISSIONS.QUALITY_VIEW, PERMISSIONS.QUALITY_MAPS_VIEW])) {
+      items.push({
+        key: '/quality',
+        icon: <LineChartOutlined style={{ fontSize: '16px' }} />,
+        label: <Link to="/quality">Качество</Link>,
+      });
+    }
+
+    // Снятия качества
+    if (hasPermission(PERMISSIONS.QUALITY_DEDUCTIONS_VIEW)) {
+      items.push({
+        key: '/quality-deductions',
+        icon: <FieldTimeOutlined style={{ fontSize: '16px' }} />,
+        label: <Link to="/quality-deductions">Снятия качества</Link>,
+      });
+    }
+
+    // Штрафная таблица
+    if (hasPermission(PERMISSIONS.PENALTIES_VIEW)) {
+      items.push({
+        key: '/penalties',
+        icon: <ExclamationCircleOutlined style={{ fontSize: '16px' }} />,
+        label: <Link to="/penalties">Штрафная таблица</Link>,
+      });
+    }
+
+    // Отчеты (группы / статистика пользователей)
+    if (hasAnyPermission([PERMISSIONS.GROUPS_VIEW, PERMISSIONS.USERS_VIEW])) {
+      const reportChildren: MenuProps['items'] = [];
+
+      if (hasPermission(PERMISSIONS.GROUPS_VIEW)) {
+        reportChildren.push({
+          key: '/groups',
+          icon: <TeamOutlined style={{ fontSize: '14px' }} />,
+          label: <Link to="/groups">Группы</Link>,
+        });
+      }
+
+      if (hasPermission(PERMISSIONS.USERS_VIEW)) {
+        reportChildren.push({
+          key: '/users/stats',
+          icon: <BarChartOutlined style={{ fontSize: '14px' }} />,
+          label: <Link to="/users/stats">Статистика пользователей</Link>,
+        });
+      }
+
+      if (reportChildren.length > 0) {
+        items.push({
+          key: 'reports',
+          icon: <BarChartOutlined style={{ fontSize: '16px' }} />,
+          label: 'Отчеты',
+          children: reportChildren,
+        });
+      }
+    }
+
+    // Настройки - показываем если есть хотя бы один permission на настройки
+    const hasSettingsAccess = hasAnyPermission([
+      PERMISSIONS.GROUPS_VIEW,
+      PERMISSIONS.TEAMS_VIEW,
+      PERMISSIONS.ROLES_VIEW,
+      PERMISSIONS.QUALITY_CRITERIA_VIEW,
+    ]);
+
+    if (hasSettingsAccess) {
+      const settingsChildren: MenuProps['items'] = [];
+
+      if (hasPermission(PERMISSIONS.GROUPS_VIEW)) {
+        settingsChildren.push({
           key: '/settings/groups',
           icon: <TeamOutlined style={{ fontSize: '14px' }} />,
           label: <Link to='/settings/groups'>Управление группами</Link>,
-        },
-        {
+        });
+      }
+
+      if (hasPermission(PERMISSIONS.TEAMS_VIEW)) {
+        settingsChildren.push({
           key: '/settings/teams',
           icon: <UserOutlined style={{ fontSize: '14px' }} />,
           label: <Link to='/settings/teams'>Управление отделами</Link>,
-        },
-        {
+        });
+      }
+
+      if (hasPermission(PERMISSIONS.ROLES_VIEW)) {
+        settingsChildren.push({
           key: '/settings/roles',
           icon: <CrownOutlined style={{ fontSize: '14px' }} />,
           label: <Link to='/settings/roles'>Управление ролями</Link>,
-        },
-        {
+        });
+      }
+
+      if (hasPermission(PERMISSIONS.QUALITY_CRITERIA_VIEW)) {
+        settingsChildren.push({
           key: '/settings/quality_criterias',
           icon: <LineChartOutlined style={{ fontSize: '14px' }} />,
           label: <Link to='/settings/quality_criterias'>Критерии качества</Link>,
-        },
-      ],
-    },
-  ];
+        });
+      }
+
+      if (settingsChildren.length > 0) {
+        items.push({
+          type: 'divider',
+          style: { 
+            margin: '8px 0', 
+            borderColor: isDarkMode ? '#303030' : '#f0f0f0' 
+          },
+        });
+
+        items.push({
+          key: 'settings',
+          icon: <SettingOutlined style={{ fontSize: '16px' }} />,
+          label: 'Настройки системы',
+          children: settingsChildren,
+        });
+      }
+    }
+
+    return items;
+  }, [hasPermission, hasAnyPermission, isDarkMode]);
 
   const bottomMenuItems: MenuProps['items'] = [
     {

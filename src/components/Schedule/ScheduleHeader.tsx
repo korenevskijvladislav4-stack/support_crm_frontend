@@ -8,9 +8,10 @@ const { Title, Text } = Typography;
 
 interface ScheduleHeaderProps {
   onRefetch?: () => void;
+  canCreateSchedule?: boolean;
 }
 
-export const ScheduleHeader: FC<ScheduleHeaderProps> = ({ onRefetch }) => {
+export const ScheduleHeader: FC<ScheduleHeaderProps> = ({ onRefetch, canCreateSchedule = false }) => {
   const { token } = theme.useToken();
 
   return (
@@ -40,15 +41,17 @@ export const ScheduleHeader: FC<ScheduleHeaderProps> = ({ onRefetch }) => {
               Обновить
             </Button>
           )}
-          <Link to="./create">
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />}
-              size="middle"
-            >
-              Создать график
-            </Button>
-          </Link>
+          {canCreateSchedule && (
+            <Link to="./create">
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />}
+                size="middle"
+              >
+                Создать график
+              </Button>
+            </Link>
+          )}
         </Space>
       </div>
     </div>

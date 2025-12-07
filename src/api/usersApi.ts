@@ -1,6 +1,6 @@
 // app/api/authApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
-import type { IUser, IUserFilters, IUserForm, IUserModel, UsersResponse } from '../types/user.types';
+import type { IUser, IUserFilters, IUserForm, IUserModel, UsersResponse, IUserStatsFilters, UserStatsResponse, IUserProfileFull, IUserProfileComment } from '../types/user.types';
 import { baseQueryWithReauth } from './baseQueries/baseQueryWithReauth';
 
 export const usersApi = createApi({
@@ -22,7 +22,7 @@ export const usersApi = createApi({
         }),
         getShowUser: builder.query<IUser, string>({
             query: (id) => ({
-                url: `/users/${id}/show`,
+                url: `/users/${id}`,
             })
         }),
         updateUser: builder.mutation<void, {form:IUserForm, id:string}>({
@@ -65,6 +65,27 @@ export const usersApi = createApi({
             }),
             invalidatesTags: ['Users'],
         }),
+        getUserStats: builder.query<UserStatsResponse, IUserStatsFilters>({
+            query: (params) => ({
+                url: `/user-stats`,
+                params
+            }),
+            providesTags: ['Users'],
+        }),
+        getUserFull: builder.query<IUserProfileFull, string>({
+            query: (id) => ({
+                url: `/users/${id}/show`,
+            }),
+            providesTags: ['Users'],
+        }),
+        addUserProfileComment: builder.mutation<IUserProfileComment, { userId: number; comment: string }>({
+            query: ({ userId, comment }) => ({
+                url: `/users/${userId}/comments`,
+                method: 'POST',
+                body: { comment },
+            }),
+            invalidatesTags: ['Users'],
+        }),
     }),
 });
 
@@ -77,5 +98,8 @@ export const {
     useGetShowUserQuery,
     useDeactivateUserMutation,
     useActivateUserMutation,
-    useTransferUserGroupMutation
+    useTransferUserGroupMutation,
+    useGetUserStatsQuery,
+    useGetUserFullQuery,
+    useAddUserProfileCommentMutation
 } = usersApi

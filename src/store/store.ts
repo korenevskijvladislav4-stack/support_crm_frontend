@@ -1,69 +1,51 @@
-import { combineReducers, configureStore } from "@reduxjs/toolkit";
-import authReducer from "../features/Auth/authSlice"
-import { authApi } from "../api/authApi";
-import { usersApi } from "../api/usersApi";
-import { attemptsApi } from "../api/attemptsApi";
-import { groupsApi } from "../api/groupsApi";
-import { teamsApi } from "../api/teamsApi";
-import { rolesApi } from "../api/rolesApi";
-import { scheduleTypesApi } from "../api/scheduleTypesApi";
-import { scheduleApi } from "../api/scheduleApi";
-import { permissionsApi } from "../api/permissionsApi";
-import { qualityApi } from "../api/qualityApi";
-import { qualityCriteriasApi } from "../api/qualityCriteriasApi";
-import { shiftRequestApi } from "../api/shiftRequestApi";
-import { penaltiesApi } from "../api/penaltiesApi";
+import { combineReducers, configureStore } from '@reduxjs/toolkit';
+import authReducer from '../features/Auth/authSlice';
+import { apis, getApiReducers, getApiMiddleware } from '../api';
+import { STORAGE_KEYS } from '../constants';
 
+/**
+ * Предзагруженное состояние из localStorage
+ */
 const preloadedState = {
-    auth: {
-        token: localStorage.getItem("auth_token"),
-        user: null,
-        isLoading: false
+  auth: {
+    token: localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN),
+    user: null,
+    isLoading: false,
+  },
+};
 
-
-    }
-}
-
+/**
+ * Корневой reducer с автоматической регистрацией API reducers
+ */
 const rootReducer = combineReducers({
-    auth: authReducer,
-    [authApi.reducerPath]: authApi.reducer,
-    [usersApi.reducerPath]: usersApi.reducer,
-    [attemptsApi.reducerPath]: attemptsApi.reducer,
-    [groupsApi.reducerPath]: groupsApi.reducer,
-    [teamsApi.reducerPath]: teamsApi.reducer,
-    [rolesApi.reducerPath]: rolesApi.reducer,
-    [scheduleTypesApi.reducerPath]: scheduleTypesApi.reducer,
-    [scheduleApi.reducerPath]: scheduleApi.reducer,
-    [permissionsApi.reducerPath]: permissionsApi.reducer,
-    [qualityApi.reducerPath]: qualityApi.reducer,
-    [qualityCriteriasApi.reducerPath]: qualityCriteriasApi.reducer,
-    [shiftRequestApi.reducerPath]: shiftRequestApi.reducer,
-    [penaltiesApi.reducerPath]: penaltiesApi.reducer,
-})
+  auth: authReducer,
+  ...getApiReducers(),
+});
 
+/**
+ * Конфигурация Redux store
+ */
 export const store = configureStore({
-    reducer: rootReducer,
-    preloadedState: preloadedState,
-    middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().concat(
-            [authApi.middleware,
-            usersApi.middleware,
-            attemptsApi.middleware,
-            groupsApi.middleware,
-            teamsApi.middleware,
-            rolesApi.middleware,
-            scheduleTypesApi.middleware,
-            scheduleApi.middleware,
-            permissionsApi.middleware,
-            qualityApi.middleware, 
-            qualityCriteriasApi.middleware,
-            shiftRequestApi.middleware,
-            penaltiesApi.middleware
-            ])
-})
+  reducer: rootReducer,
+  preloadedState,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        // Игнорируем проверку сериализации для RTK Query
+        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+      },
+    }).concat(getApiMiddleware()) as any,
+  devTools: import.meta.env.MODE !== 'production',
+});
 
-if (localStorage.getItem('auth_token')) {
-    store.dispatch(authApi.endpoints.currentUser.initiate());
+/**
+ * Инициализация: загрузка текущего пользователя если есть токен
+ */
+if (localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)) {
+  const authApi = apis.find(api => api.reducerPath === 'authApi');
+  if (authApi && 'endpoints' in authApi) {
+    store.dispatch<any>((authApi as typeof apis[0]).endpoints.currentUser.initiate());
+  }
 }
 
 export type RootState = ReturnType<typeof store.getState>;

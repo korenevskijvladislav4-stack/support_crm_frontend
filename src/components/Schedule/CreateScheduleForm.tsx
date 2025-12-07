@@ -1,8 +1,9 @@
 import React from 'react';
-import { Card, Form, Select, DatePicker, Row, Col, Divider, Space, Button, Typography, Alert } from 'antd';
-import { TeamOutlined, PlayCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Card, Form, Select, DatePicker, Space, Button, Typography, Alert } from 'antd';
+import { TeamOutlined, PlayCircleOutlined, CalendarOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import type { IScheduleForm, FormFieldValue } from '../../types/schedule.types';
-import type { ITeam } from '../../types/teams.type';
+import type { ITeam } from '../../types/team.types';
 import styles from '../../styles/schedule/create-schedule.module.css';
 
 const { Text } = Typography;
@@ -36,28 +37,32 @@ const CreateScheduleForm: React.FC<CreateScheduleFormProps> = ({
       }
       className={styles.formCard}
     >
-      <Form
-        labelCol={{ span: 8 }}
-        wrapperCol={{ span: 16 }}
-        layout="horizontal"
-        size="large"
-      >
-        <Divider orientation="left">Выбор отдела</Divider>
-        <Form.Item label="Отдел" required>
+      <Form layout="vertical" size="large">
+        {/* Выбор отдела */}
+        <Form.Item 
+          label={
+            <Space>
+              <TeamOutlined style={{ color: '#1890ff' }} />
+              <span>Отдел</span>
+            </Space>
+          }
+          required
+          validateStatus={form.team_id ? 'success' : ''}
+        >
           <Select
-            value={form.team_id}
+            value={form.team_id || undefined}
             onChange={(value) => onFormChange('team_id', value)}
-            placeholder="Выберите отдел"
+            placeholder="Выберите отдел для генерации графика"
             loading={isLoadingTeams}
-            optionFilterProp="children"
+            optionFilterProp="label"
             showSearch
             allowClear
-            size="large"
+            style={{ width: '100%' }}
           >
             {teams?.map((team) => (
-              <Select.Option key={team.id} value={team.id}>
+              <Select.Option key={team.id} value={team.id} label={team.name}>
                 <Space>
-                  <TeamOutlined />
+                  <TeamOutlined style={{ color: '#1890ff' }} />
                   {team.name}
                 </Space>
               </Select.Option>
@@ -65,89 +70,56 @@ const CreateScheduleForm: React.FC<CreateScheduleFormProps> = ({
           </Select>
         </Form.Item>
 
-        <Divider />
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <ClockCircleOutlined style={{ color: '#faad14' }} />
-            <Text strong>Даты начала смен</Text>
-          </div>
-          
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={12}>
-              <Form.Item 
-                label="Верхние смены" 
-                required
-                validateStatus={form.top_start ? 'success' : ''}
-                help={form.top_start ? 'Дата установлена' : 'Укажите дату начала верхних смен'}
-              >
-                <DatePicker
-                  style={{ width: '100%' }}
-                  onChange={(_, dateString) => onFormChange('top_start', Array.isArray(dateString) ? dateString[0] : dateString)}
-                  placeholder="Выберите дату начала"
-                  format="YYYY-MM-DD"
-                  disabled={!form.team_id}
-                />
-              </Form.Item>
-            </Col>
-            
-            <Col xs={24} md={12}>
-              <Form.Item 
-                label="Нижние смены" 
-                required
-                validateStatus={form.bottom_start ? 'success' : ''}
-                help={form.bottom_start ? 'Дата установлена' : 'Укажите дату начала нижних смен'}
-              >
-                <DatePicker
-                  style={{ width: '100%' }}
-                  onChange={(_, dateString) => onFormChange('bottom_start', Array.isArray(dateString) ? dateString[0] : dateString)}
-                  placeholder="Выберите дату начала"
-                  format="YYYY-MM-DD"
-                  disabled={!form.team_id}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        </div>
+        {/* Даты начала смен */}
+        <Form.Item 
+          label={
+            <Space>
+              <CalendarOutlined style={{ color: '#52c41a' }} />
+              <span>Дата начала верхних смен</span>
+            </Space>
+          }
+          required
+          validateStatus={form.top_start ? 'success' : ''}
+          help={!form.team_id ? 'Сначала выберите отдел' : undefined}
+        >
+          <DatePicker
+            style={{ width: '100%' }}
+            value={form.top_start ? dayjs(form.top_start) : null}
+            onChange={(_, dateString) => onFormChange('top_start', Array.isArray(dateString) ? dateString[0] : dateString)}
+            placeholder="Выберите дату начала верхних смен"
+            format="YYYY-MM-DD"
+            disabled={!form.team_id}
+          />
+        </Form.Item>
 
-        <Divider />
+        <Form.Item 
+          label={
+            <Space>
+              <CalendarOutlined style={{ color: '#faad14' }} />
+              <span>Дата начала нижних смен</span>
+            </Space>
+          }
+          required
+          validateStatus={form.bottom_start ? 'success' : ''}
+          help={!form.team_id ? 'Сначала выберите отдел' : undefined}
+        >
+          <DatePicker
+            style={{ width: '100%' }}
+            value={form.bottom_start ? dayjs(form.bottom_start) : null}
+            onChange={(_, dateString) => onFormChange('bottom_start', Array.isArray(dateString) ? dateString[0] : dateString)}
+            placeholder="Выберите дату начала нижних смен"
+            format="YYYY-MM-DD"
+            disabled={!form.team_id}
+          />
+        </Form.Item>
 
         <Alert
-          message="Информация о генерации графика"
-          description="Система автоматически создаст график смен на основе выбранных дат. Верхние и нижние смены будут чередоваться согласно установленному расписанию."
+          message="Генерация в фоновом режиме"
+          description="После запуска график будет генерироваться в фоне. Вы сможете отслеживать прогресс на экране."
           type="info"
           showIcon
           style={{ marginBottom: 24 }}
         />
-
-        <Form.Item 
-          label="Отдел" 
-          required
-          style={{ marginBottom: 32 }}
-          validateStatus={form.team_id ? 'success' : ''}
-          help={form.team_id ? 'Отдел выбран' : 'Выберите отдел для генерации графика'}
-        >
-          <Select
-            value={form.team_id}
-            onChange={(value) => onFormChange('team_id', value)}
-            placeholder="Выберите отдел"
-            loading={isLoadingTeams}
-            optionFilterProp="label"
-            showSearch
-            allowClear
-            suffixIcon={<TeamOutlined />}
-          >
-            {teams?.map((team) => (
-              <Select.Option key={team.id} value={team.id} label={team.name}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <TeamOutlined style={{ color: '#1890ff' }} />
-                  {team.name}
-                </div>
-              </Select.Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Divider />
 
         <Form.Item style={{ marginBottom: 0, textAlign: 'center' }}>
           <Button 
@@ -157,14 +129,14 @@ const CreateScheduleForm: React.FC<CreateScheduleFormProps> = ({
             onClick={onSubmit}
             loading={isSubmitting}
             disabled={!isValid}
-            style={{ minWidth: 200, height: 50 }}
+            style={{ minWidth: 200, height: 48 }}
           >
-            Сгенерировать график
+            {isSubmitting ? 'Запуск...' : 'Сгенерировать график'}
           </Button>
           
           {!isValid && (
-            <Text type="secondary" style={{ display: 'block', marginTop: 12 }}>
-              Заполните все обязательные поля для генерации
+            <Text type="secondary" style={{ display: 'block', marginTop: 12, fontSize: 13 }}>
+              Заполните все поля для запуска генерации
             </Text>
           )}
         </Form.Item>

@@ -2,10 +2,10 @@ import React from 'react';
 import { Card, Descriptions, Avatar, Space, Tag, Typography, Alert } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import type { IUserForm } from '../../types/user.types';
-import type { ITeam } from '../../types/teams.type';
-import type { IGroup } from '../../types/groups.types';
+import type { ITeam } from '../../types/team.types';
+import type { IGroup } from '../../types/group.types';
 import type { IRole } from '../../types/role.types';
-import type { IScheduleType } from '../../types/schedule-type.types';
+import type { IScheduleType } from '../../types/schedule.types';
 import styles from '../../styles/users/edit-user.module.css';
 
 const { Title, Text } = Typography;

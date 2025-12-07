@@ -2,21 +2,23 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithReauth } from './baseQueries/baseQueryWithReauth';
 import type {
-  ApiResponse,
-  QualityCriterion,
-  QualityDeduction,
-  QualityCallDeduction,
-  QualityMap,
+  IQualityDeduction,
+  IQualityCallDeduction,
+  IQualityMap,
   Team,
   User,
-  CreateQualityMapRequest,
-  CreateDeductionRequest,
-  CreateCallDeductionRequest,
-  UpdateChatIdsRequest,
-  UpdateCallIdsRequest,
+  ICreateQualityMapRequest,
+  ICreateDeductionRequest,
+  ICreateCallDeductionRequest,
+  IUpdateChatIdsRequest,
+  IUpdateCallIdsRequest,
   QualityMapListResponse,
-  QualityMapsFilter
+  IQualityMapsFilter,
+  QualityDeductionListResponse,
+  IQualityDeductionsFilter
 } from '../types/quality.types';
+import type { IQualityCriteria } from '../types/quality-criteria.types';
+import type { IApiResponse } from '../types/common.types';
 
 export const qualityApi = createApi({
   reducerPath: 'qualitiesApi',
@@ -24,7 +26,7 @@ export const qualityApi = createApi({
   tagTypes: ['Criterion', 'QualityMap', 'Users', 'QualityMapList'],
   endpoints: (builder) => ({
     // Критерии
-    getCriteria: builder.query<QualityCriterion[], { team_id?: number }>({
+    getCriteria: builder.query<IQualityCriteria[], { team_id?: number }>({
       query: (filters = {}) => {
         const params = new URLSearchParams();
 
@@ -43,7 +45,7 @@ export const qualityApi = createApi({
       providesTags: ['Criterion'],
     }),
 
-    createCriterion: builder.mutation<QualityCriterion, Partial<QualityCriterion>>({
+    createCriterion: builder.mutation<IQualityCriteria, Partial<IQualityCriteria>>({
       query: (body) => ({
         url: '/quality-criteria',
         method: 'POST',
@@ -52,7 +54,7 @@ export const qualityApi = createApi({
       invalidatesTags: ['Criterion'],
     }),
 
-    updateCriterion: builder.mutation<QualityCriterion, { id: number; data: Partial<QualityCriterion> }>({
+    updateCriterion: builder.mutation<IQualityCriteria, { id: number; data: Partial<IQualityCriteria> }>({
       query: ({ id, data }) => ({
         url: `/quality-criteria/${id}`,
         method: 'PUT',
@@ -62,7 +64,7 @@ export const qualityApi = createApi({
     }),
 
     // Карты качества
-    createQualityMap: builder.mutation<ApiResponse<QualityMap>, CreateQualityMapRequest>({
+    createQualityMap: builder.mutation<IApiResponse<IQualityMap>, ICreateQualityMapRequest>({
       query: (body) => ({
         url: '/quality-maps',
         method: 'POST',
@@ -70,12 +72,12 @@ export const qualityApi = createApi({
       }),
     }),
 
-    getQualityMap: builder.query<QualityMap, number>({
+    getQualityMap: builder.query<IQualityMap, number>({
       query: (id) => `/quality-maps/${id}`,
       providesTags: ['QualityMap'],
     }),
 
-    updateQualityMapChatIds: builder.mutation<QualityMap, { id: number; data: UpdateChatIdsRequest }>({
+    updateQualityMapChatIds: builder.mutation<IQualityMap, { id: number; data: IUpdateChatIdsRequest }>({
       query: ({ id, data }) => ({
         url: `/quality-maps/${id}/chat-ids`,
         method: 'PUT',
@@ -84,7 +86,7 @@ export const qualityApi = createApi({
       invalidatesTags: ['QualityMap'],
     }),
 
-    updateQualityMapCallIds: builder.mutation<QualityMap, { id: number; data: UpdateCallIdsRequest }>({
+    updateQualityMapCallIds: builder.mutation<IQualityMap, { id: number; data: IUpdateCallIdsRequest }>({
       query: ({ id, data }) => ({
         url: `/quality-maps/${id}/call-ids`,
         method: 'PUT',
@@ -94,7 +96,7 @@ export const qualityApi = createApi({
     }),
 
     // Снятия для чатов
-    createDeduction: builder.mutation<ApiResponse<QualityDeduction>, CreateDeductionRequest>({
+    createDeduction: builder.mutation<IApiResponse<IQualityDeduction>, ICreateDeductionRequest>({
       query: (body) => ({
         url: '/quality-deductions',
         method: 'POST',
@@ -104,7 +106,7 @@ export const qualityApi = createApi({
     }),
 
     // Снятия для звонков
-    createCallDeduction: builder.mutation<ApiResponse<QualityCallDeduction>, CreateCallDeductionRequest>({
+    createCallDeduction: builder.mutation<IApiResponse<IQualityCallDeduction>, ICreateCallDeductionRequest>({
       query: (body) => ({
         url: '/quality-call-deductions',
         method: 'POST',
@@ -137,9 +139,12 @@ export const qualityApi = createApi({
       },
     }),
 
-    // Команды
+    // Команды (для селектов)
     getTeams: builder.query<Team[], void>({
-      query: () => '/teams',
+      query: () => ({
+        url: '/teams',
+        params: { all: true }
+      }),
     }),
 
     deleteQualityMap: builder.mutation<void, number>({
@@ -149,7 +154,7 @@ export const qualityApi = createApi({
       }),
       invalidatesTags: ['QualityMapList'],
     }),
-    getQualityMaps: builder.query<QualityMapListResponse, QualityMapsFilter>({
+    getQualityMaps: builder.query<QualityMapListResponse, IQualityMapsFilter>({
       query: (filters = {}) => {
         const params = new URLSearchParams();
 
@@ -162,6 +167,20 @@ export const qualityApi = createApi({
         return `/quality-maps?${params.toString()}`;
       },
       providesTags: ['QualityMapList'],
+    }),
+
+    getQualityDeductions: builder.query<QualityDeductionListResponse, IQualityDeductionsFilter>({
+      query: (filters = {}) => {
+        const params = new URLSearchParams();
+
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            params.append(key, value.toString());
+          }
+        });
+
+        return `/quality-deductions?${params.toString()}`;
+      },
     }),
 
   }),
@@ -180,5 +199,6 @@ export const {
   useUpdateQualityMapChatIdsMutation,
   useUpdateQualityMapCallIdsMutation,
   useDeleteQualityMapMutation,
-  useGetQualityMapsQuery
+  useGetQualityMapsQuery,
+  useGetQualityDeductionsQuery
 } = qualityApi;

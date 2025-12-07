@@ -1,11 +1,11 @@
 import React from 'react';
 import { Card, Descriptions, Avatar, Space, Tag, Typography, Alert, Button } from 'antd';
 import { UserOutlined, MailOutlined, PhoneOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import type { IAttemptForm } from '../../types/attempts.types';
-import type { ITeam } from '../../types/teams.type';
-import type { IGroup } from '../../types/groups.types';
+import type { IAttemptForm } from '../../types/attempt.types';
+import type { ITeam } from '../../types/team.types';
+import type { IGroup } from '../../types/group.types';
 import type { IRole } from '../../types/role.types';
-import type { IScheduleType } from '../../types/schedule-type.types';
+import type { IScheduleType } from '../../types/schedule.types';
 import styles from '../../styles/attempts/attempt-approve.module.css';
 
 const { Title, Text } = Typography;

@@ -1,15 +1,33 @@
-// app/api/authApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithReauth } from './baseQueries/baseQueryWithReauth';
-import type { IQualityCriteriaForm, IQualityCriteria, IQualityCriteriaCategory } from '../types/qualityCriterias.types';
+import type { 
+  IQualityCriteriaForm, 
+  IQualityCriteria, 
+  IQualityCriteriaCategory,
+  IQualityCriteriaFilters,
+  QualityCriteriaResponse 
+} from '../types/quality-criteria.types';
 
 export const qualityCriteriasApi = createApi({
     reducerPath: 'qualityCriteriasApi',
     baseQuery: baseQueryWithReauth,
     tagTypes: ['QualityCriteria', 'QualityCriteriaCategory'],
     endpoints: (builder) => ({
-    getAllQualityCriterias: builder.query<IQualityCriteria[], void>({
-      query: () => '/quality-criteria',
+    // Получить список с пагинацией и фильтрами
+    getQualityCriterias: builder.query<QualityCriteriaResponse, IQualityCriteriaFilters>({
+      query: (params) => ({
+        url: '/quality-criteria',
+        params
+      }),
+      providesTags: ['QualityCriteria'],
+    }),
+
+    // Получить все критерии без пагинации (для форм)
+    getAllQualityCriterias: builder.query<IQualityCriteria[], { team_id?: number } | void>({
+      query: (params) => ({
+        url: '/quality-criteria',
+        params: { all: true, ...params }
+      }),
       providesTags: ['QualityCriteria'],
     }),
 
@@ -57,6 +75,8 @@ export const qualityCriteriasApi = createApi({
 });
 
 export const {
+  useGetQualityCriteriasQuery,
+  useLazyGetQualityCriteriasQuery,
   useGetAllQualityCriteriasQuery,
   useCreateQualityCriteriaMutation,
   useUpdateQualityCriteriaMutation,

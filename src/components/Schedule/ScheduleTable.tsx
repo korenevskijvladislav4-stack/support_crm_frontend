@@ -1,24 +1,316 @@
-import { type FC, memo } from "react";
+import { type FC, memo, useMemo } from "react";
 import { Table, Tooltip, Dropdown, Space, theme, Card } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, CloseOutlined, CalendarOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, CheckOutlined, CloseOutlined, CalendarOutlined, CrownOutlined } from "@ant-design/icons";
 import type { TableColumnsType, MenuProps } from "antd";
-import type { IUserWithShifts } from "../../types/user.types";
-import type { IShift } from "../../types/shifts.types";
+import type { IScheduleTableRow, IScheduleShift, ShiftsMap } from "../../types/schedule.types";
+import dayjs from "dayjs";
+import styles from "../../styles/schedule/schedule-cells.module.css";
 
-interface ScheduleTableProps {
-  columns: TableColumnsType<IUserWithShifts>;
-  data?: IUserWithShifts[];
-  loading?: boolean;
-  emptyText?: React.ReactNode;
+// ============ SHIFT CELL ============
+interface ShiftCellProps {
+  shift: IScheduleShift;
+  userId: number;
+  currentUserId?: number;
+  onApprove?: (id: number) => void;
+  onReject?: (id: number) => void;
+  onEdit?: (shift: IScheduleShift) => void;
+  onDelete?: (id: number) => void;
 }
 
-export const ScheduleTable: FC<ScheduleTableProps> = ({
-  columns,
-  data,
-  loading,
-  emptyText,
+const ShiftCellComponent: FC<ShiftCellProps> = ({
+  shift,
+  userId,
+  currentUserId,
+  onApprove,
+  onReject,
+  onEdit,
+  onDelete,
 }) => {
   const { token } = theme.useToken();
+  const isCurrentUser = userId === currentUserId;
+  const hasUserShiftId = shift.user_shift_id;
+
+  const cellClassName = useMemo(() => {
+    if (shift.status === 'pending') return styles.shiftPending;
+    if (shift.duration === 12) return styles.shiftApproved;
+    return styles.shiftApprovedShort;
+  }, [shift.status, shift.duration]);
+
+  const tooltipTitle = shift.status === 'pending' 
+    ? `Запрошенная смена: ${shift.duration}ч (ожидает одобрения)`
+    : `Смена: ${shift.duration}ч`;
+
+  const menuItems: MenuProps['items'] = useMemo(() => {
+    const items: MenuProps['items'] = [];
+
+    if (shift.status === 'pending' && hasUserShiftId) {
+      items.push(
+        {
+          key: 'approve',
+          label: <Space><CheckOutlined style={{ color: '#52c41a' }} /><span>Одобрить</span></Space>,
+          onClick: () => onApprove?.(shift.user_shift_id!),
+        },
+        {
+          key: 'reject',
+          label: <Space><CloseOutlined style={{ color: '#ff4d4f' }} /><span>Отклонить</span></Space>,
+          onClick: () => onReject?.(shift.user_shift_id!),
+        }
+      );
+      if (isCurrentUser) {
+        items.push({
+          key: 'delete',
+          label: <Space><DeleteOutlined style={{ color: '#ff4d4f' }} /><span>Удалить запрос</span></Space>,
+          onClick: () => onDelete?.(shift.user_shift_id!),
+        });
+      }
+    }
+
+    if (shift.status === 'approved' && hasUserShiftId) {
+      items.push(
+        {
+          key: 'edit',
+          label: <Space><EditOutlined /><span>Редактировать</span></Space>,
+          onClick: () => onEdit?.(shift),
+        },
+        {
+          key: 'delete',
+          label: <Space><DeleteOutlined style={{ color: '#ff4d4f' }} /><span>Удалить</span></Space>,
+          onClick: () => onDelete?.(shift.user_shift_id!),
+        }
+      );
+    }
+
+    return items;
+  }, [shift, hasUserShiftId, isCurrentUser, onApprove, onReject, onEdit, onDelete]);
+
+  const content = (
+    <div className={`${styles.shiftCell} ${cellClassName}`}>
+      {shift.duration}
+    </div>
+  );
+
+  if (menuItems.length > 0) {
+    return (
+      <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottom">
+        <Tooltip 
+          title={tooltipTitle}
+          overlayInnerStyle={{ 
+            backgroundColor: token.colorBgElevated,
+            color: token.colorText,
+            border: `1px solid ${token.colorBorder}`
+          }}
+        >
+          {content}
+        </Tooltip>
+      </Dropdown>
+    );
+  }
+
+  return (
+    <Tooltip 
+      title={tooltipTitle}
+      overlayInnerStyle={{ 
+        backgroundColor: token.colorBgElevated,
+        color: token.colorText,
+        border: `1px solid ${token.colorBorder}`
+      }}
+    >
+      {content}
+    </Tooltip>
+  );
+};
+
+export const ShiftCell = memo(ShiftCellComponent);
+
+// ============ EMPTY CELL ============
+interface EmptyCellProps {
+  dayNumber: number;
+  userId: number;
+  currentUserId?: number;
+  /** Запросить смену (только для своей строки) */
+  onRequestShift?: (dayNumber: number) => void;
+  /** Добавить смену напрямую (для любой строки, если есть права) */
+  onAddShift?: (dayNumber: number, userId: number) => void;
+}
+
+const EmptyCellComponent: FC<EmptyCellProps> = ({
+  dayNumber,
+  userId,
+  currentUserId,
+  onRequestShift,
+  onAddShift,
+}) => {
+  const isCurrentUser = userId === currentUserId;
+
+  const menuItems: MenuProps['items'] = useMemo(() => {
+    const items: MenuProps['items'] = [];
+    
+    // Добавить смену напрямую - доступно для любого пользователя (если есть права)
+    if (onAddShift) {
+      items.push({
+        key: "add-direct",
+        label: <Space><PlusOutlined /><span>Добавить смену</span></Space>,
+        onClick: () => onAddShift(dayNumber, userId),
+      });
+    }
+
+    // Запросить смену - только для своей строки
+    if (onRequestShift && isCurrentUser) {
+      items.push({
+        key: "request",
+        label: <Space><PlusOutlined /><span>Запросить смену</span></Space>,
+        onClick: () => onRequestShift(dayNumber),
+      });
+    }
+
+    return items;
+  }, [dayNumber, userId, onRequestShift, onAddShift, isCurrentUser]);
+
+  if (menuItems.length === 0) {
+    return <div style={{ height: 32 }} />;
+  }
+
+  return (
+    <Dropdown menu={{ items: menuItems }} placement="bottom" trigger={['click']}>
+      <div className={styles.emptyCell}>
+        <PlusOutlined className={styles.emptyCellIcon} />
+      </div>
+    </Dropdown>
+  );
+};
+
+export const EmptyShiftCell = memo(EmptyCellComponent);
+
+// ============ SCHEDULE TABLE ============
+interface ScheduleTableProps {
+  data: IScheduleTableRow[];
+  shifts: ShiftsMap;
+  daysInMonth: number;
+  month: string;
+  currentUserId?: number;
+  loading?: boolean;
+  emptyText?: React.ReactNode;
+  onRequestShift?: (dayNumber: number) => void;
+  onAddShift?: (dayNumber: number, userId: number) => void;
+  onApprove?: (id: number) => void;
+  onReject?: (id: number) => void;
+  onEdit?: (shift: IScheduleShift) => void;
+  onDelete?: (id: number) => void;
+}
+
+export const ScheduleTable: FC<ScheduleTableProps> = memo(({
+  data,
+  shifts,
+  daysInMonth,
+  month,
+  currentUserId,
+  loading,
+  emptyText,
+  onRequestShift,
+  onAddShift,
+  onApprove,
+  onReject,
+  onEdit,
+  onDelete,
+}) => {
+  const { token } = theme.useToken();
+
+  // Генерация колонок дней - максимально оптимизировано
+  const dayColumns = useMemo((): TableColumnsType<IScheduleTableRow> => {
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const dayNumber = i + 1;
+      const currentDay = dayjs(month).date(dayNumber);
+      const isWeekend = currentDay.day() === 0 || currentDay.day() === 6;
+      const isToday = currentDay.isSame(dayjs(), 'day');
+
+      let headerClass = styles.dayHeader;
+      if (isToday) headerClass += ` ${styles.dayHeaderToday}`;
+      else if (isWeekend) headerClass += ` ${styles.dayHeaderWeekend}`;
+
+      return {
+        key: `day_${dayNumber}`,
+        title: (
+          <Tooltip title={currentDay.format('DD.MM.YYYY')}>
+            <div className={headerClass}>{dayNumber}</div>
+          </Tooltip>
+        ),
+        width: 50,
+        align: 'center' as const,
+        render: (_: unknown, record: IScheduleTableRow) => {
+          const shiftKey = `${record.id}_${dayNumber}`;
+          const shift = shifts[shiftKey];
+
+          if (!shift) {
+            return (
+              <EmptyShiftCell
+                dayNumber={dayNumber}
+                userId={record.id}
+                currentUserId={currentUserId}
+                onRequestShift={onRequestShift}
+                onAddShift={onAddShift}
+              />
+            );
+          }
+
+          return (
+            <ShiftCell
+              shift={shift}
+              userId={record.id}
+              currentUserId={currentUserId}
+              onApprove={onApprove}
+              onReject={onReject}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          );
+        },
+      };
+    });
+  }, [daysInMonth, month, shifts, currentUserId, onRequestShift, onAddShift, onApprove, onReject, onEdit, onDelete]);
+
+  // Колонка сотрудника
+  const employeeColumn = useMemo(() => ({
+    title: "Сотрудник",
+    dataIndex: "name",
+    fixed: "left" as const,
+    width: 200,
+    render: (_: unknown, record: IScheduleTableRow) => (
+      <div className={styles.employeeCell}>
+        <div className={styles.employeeAvatar}>
+          {record.name?.[0]}{record.surname?.[0]}
+        </div>
+        <div className={styles.employeeInfo}>
+          <div className={styles.employeeName} style={{ color: token.colorText }}>
+            {record.is_supervisor && <CrownOutlined className={styles.supervisorIcon} />}
+            <span>{record.name} {record.surname}</span>
+          </div>
+        </div>
+      </div>
+    ),
+  }), [token.colorText]);
+
+  // Колонка часов
+  const hoursColumn = useMemo(() => ({
+    title: "Часов",
+    align: "center" as const,
+    fixed: 'right' as const,
+    width: 80,
+    render: (_: unknown, record: IScheduleTableRow) => {
+      let hoursClass = styles.hoursCell;
+      if (record.total_hours >= 160) hoursClass += ` ${styles.hoursHigh}`;
+      else if (record.total_hours >= 120) hoursClass += ` ${styles.hoursMedium}`;
+      else hoursClass += ` ${styles.hoursLow}`;
+
+      return <div className={hoursClass}>{record.total_hours}</div>;
+    },
+  }), []);
+
+  // Собираем все колонки
+  const columns = useMemo((): TableColumnsType<IScheduleTableRow> => [
+    employeeColumn,
+    ...dayColumns,
+    hoursColumn,
+  ], [employeeColumn, dayColumns, hoursColumn]);
 
   return (
     <Card 
@@ -30,296 +322,22 @@ export const ScheduleTable: FC<ScheduleTableProps> = ({
         </Space>
       }
       style={{ background: token.colorBgContainer }}
-      bodyStyle={{ padding: '12px' }}
+      styles={{ body: { padding: '12px' } }}
     >
-        <Table
-          size="small"
-          columns={columns}
-          dataSource={data}
-          loading={loading}
-          locale={{ emptyText }}
-          scroll={{ x: 'max-content' }}
-          pagination={false}
-          rowKey="id"
-          bordered
-        />
+      <Table
+        size="small"
+        columns={columns}
+        dataSource={data}
+        loading={loading}
+        locale={{ emptyText }}
+        scroll={{ x: 'max-content' }}
+        pagination={false}
+        rowKey="id"
+        bordered
+        virtual
+      />
     </Card>
   );
-};
-
-// Компонент для отображения ячейки смены
-interface ShiftCellProps {
-  shift: IShift;
-  record: IUserWithShifts;
-  currentUser?: { id?: number; roles?: Array<{ name: string }> };
-  onApprove?: (id: number) => void;
-  onReject?: (id: number) => void;
-  onEdit?: (shift: IShift) => void;
-  onDelete?: (id: number) => void;
-}
-
-export const ShiftCell: FC<ShiftCellProps> = memo(({
-  shift,
-  record,
-  currentUser,
-  onApprove,
-  onReject,
-  onEdit,
-  onDelete,
-}) => {
-  const { token } = theme.useToken();
-  const isDark = token.colorBgBase === '#0d1117';
-  const isCurrentUser = record.id === currentUser?.id;
-  const hasUserShiftId = shift.user_shift_id;
-
-  // Определяем стиль в зависимости от статуса с учетом темной темы
-  const getShiftStyle = () => {
-    if (shift.status === 'pending') {
-      return {
-        background: isDark ? '#3d2816' : '#fff7e6',
-        border: `1px solid ${isDark ? '#8b4513' : '#ffd591'}`,
-        color: isDark ? '#ffa940' : '#d46b08',
-      };
-    }
-    if (shift.duration === 12) {
-      return {
-        background: isDark ? '#162312' : '#f6ffed',
-        border: `1px solid ${isDark ? '#3f6600' : '#b7eb8f'}`,
-        color: isDark ? '#73d13d' : '#389e0d',
-      };
-    }
-    return {
-      background: isDark ? '#111b26' : '#e6f7ff',
-      border: `1px solid ${isDark ? '#003a8c' : '#91d5ff'}`,
-      color: isDark ? '#69c0ff' : '#0958d9',
-    };
-  };
-
-  const tooltipTitle = shift.status === 'pending' 
-    ? `Запрошенная смена: ${shift.duration}ч (ожидает одобрения)`
-    : `Смена: ${shift.duration}ч`;
-
-  // Формируем меню действий
-  const menuItems: MenuProps['items'] = [];
-
-  if (shift.status === 'pending' && hasUserShiftId) {
-    menuItems.push(
-      {
-        key: 'approve',
-        label: (
-          <Space>
-            <CheckOutlined style={{ color: '#52c41a' }} />
-            <span>Одобрить</span>
-          </Space>
-        ),
-        onClick: () => onApprove?.(shift.user_shift_id!),
-      },
-      {
-        key: 'reject',
-        label: (
-          <Space>
-            <CloseOutlined style={{ color: '#ff4d4f' }} />
-            <span>Отклонить</span>
-          </Space>
-        ),
-        onClick: () => onReject?.(shift.user_shift_id!),
-      }
-    );
-    if (isCurrentUser) {
-      menuItems.push({
-        key: 'delete',
-        label: (
-          <Space>
-            <DeleteOutlined style={{ color: '#ff4d4f' }} />
-            <span>Удалить запрос</span>
-          </Space>
-        ),
-        onClick: () => {
-          if (!shift.user_shift_id) return;
-          onDelete?.(shift.user_shift_id);
-        },
-      });
-    }
-  }
-
-  if (shift.status === 'approved' && hasUserShiftId) {
-    menuItems.push({
-      key: 'edit',
-      label: (
-        <Space>
-          <EditOutlined />
-          <span>Редактировать</span>
-        </Space>
-      ),
-      onClick: () => onEdit?.(shift),
-    });
-    menuItems.push({
-      key: 'delete',
-      label: (
-        <Space>
-          <DeleteOutlined style={{ color: '#ff4d4f' }} />
-          <span>Удалить</span>
-        </Space>
-      ),
-      onClick: () => {
-        if (!shift.user_shift_id) return;
-        onDelete?.(shift.user_shift_id);
-      },
-    });
-  }
-
-  const shiftStyle = getShiftStyle();
-
-  if (menuItems.length > 0) {
-    return (
-      <Dropdown 
-        menu={{ items: menuItems }}
-        trigger={['click']}
-        placement="bottom"
-      >
-        <Tooltip 
-          title={tooltipTitle}
-          overlayInnerStyle={{ 
-            backgroundColor: token.colorBgElevated,
-            color: token.colorText,
-            border: `1px solid ${token.colorBorder}`
-          }}
-        >
-          <div
-            style={{
-              ...shiftStyle,
-              padding: '4px 8px',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontWeight: 500,
-              fontSize: 13,
-              textAlign: 'center',
-              transition: 'all 0.2s',
-              display: 'inline-block',
-              minWidth: 32,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.8';
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            {shift.duration}
-          </div>
-        </Tooltip>
-      </Dropdown>
-    );
-  }
-
-  return (
-      <Tooltip 
-        title={tooltipTitle}
-        overlayInnerStyle={{ 
-          backgroundColor: token.colorBgElevated,
-          color: token.colorText,
-          border: `1px solid ${token.colorBorder}`
-        }}
-      >
-      <div
-        style={{
-          ...shiftStyle,
-          padding: '4px 8px',
-          borderRadius: 4,
-          fontWeight: 500,
-          fontSize: 13,
-          textAlign: 'center',
-          display: 'inline-block',
-          minWidth: 32,
-        }}
-      >
-        {shift.duration}
-      </div>
-    </Tooltip>
-  );
 });
 
-ShiftCell.displayName = 'ShiftCell';
-
-// Компонент для пустой ячейки
-interface EmptyShiftCellProps {
-  dayNumber: number;
-  record: IUserWithShifts;
-  onRequestShift?: (dayNumber: number) => void;
-  onAddShift?: (dayNumber: number, userId?: number) => void;
-}
-
-export const EmptyShiftCell: FC<EmptyShiftCellProps> = memo(({
-  dayNumber,
-  record,
-  onRequestShift,
-  onAddShift,
-}) => {
-  const { token } = theme.useToken();
-  const isDark = token.colorBgBase === '#0d1117';
-  const emptyCellMenuItems: MenuProps['items'] = [];
-
-  if (onAddShift) {
-    emptyCellMenuItems.push({
-      key: "add-direct",
-      label: (
-        <Space>
-          <PlusOutlined />
-          <span>Добавить смену</span>
-        </Space>
-      ),
-      onClick: () => onAddShift?.(dayNumber, record.id),
-    });
-  }
-
-  if (onRequestShift) {
-    emptyCellMenuItems.push({
-      key: "request",
-      label: (
-        <Space>
-          <PlusOutlined />
-          <span>Запросить смену</span>
-        </Space>
-      ),
-      onClick: () => onRequestShift?.(dayNumber),
-    });
-  }
-
-  if (emptyCellMenuItems.length === 0) {
-    return <div style={{ height: 32 }} />;
-  }
-
-  return (
-    <Dropdown 
-      menu={{ items: emptyCellMenuItems }}
-      placement="bottom"
-      trigger={['click']}
-    >
-      <div 
-        style={{
-          width: '100%',
-          height: 32,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          borderRadius: 4,
-          transition: 'all 0.2s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = isDark ? token.colorFillTertiary : '#f5f5f5';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-        }}
-      >
-        <PlusOutlined style={{ 
-          color: isDark ? token.colorTextTertiary : '#bfbfbf', 
-          fontSize: 12 
-        }} />
-      </div>
-    </Dropdown>
-  );
-});
+ScheduleTable.displayName = 'ScheduleTable';

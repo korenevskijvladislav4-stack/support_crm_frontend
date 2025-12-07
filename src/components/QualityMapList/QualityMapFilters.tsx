@@ -1,17 +1,17 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Card, Space, Button, Flex, Input, Select, theme, DatePicker } from 'antd';
 import { SearchOutlined, ReloadOutlined, ClearOutlined, CheckOutlined } from '@ant-design/icons';
-import type { QualityMapsFilter } from '../../types/quality.types';
+import type { IQualityMapsFilter } from '../../types/quality.types';
 import dayjs, { type Dayjs } from 'dayjs';
 
 const { Option } = Select;
 
 interface QualityMapFiltersProps {
-  filters: QualityMapsFilter;
+  filters: IQualityMapsFilter;
   teams?: Array<{ id: number; name: string }>;
   groups?: Array<{ id: number; name: string }>;
   checkers?: Array<{ id: number; name: string; surname: string }>;
-  onApplyFilters: (filters: QualityMapsFilter) => void;
+  onApplyFilters: (filters: IQualityMapsFilter) => void;
   onResetFilters: () => void;
   hasActiveFilters: boolean;
   loading?: boolean;
@@ -32,7 +32,7 @@ const QualityMapFilters: React.FC<QualityMapFiltersProps> = ({
   const { token } = theme.useToken();
   
   // Локальное состояние для промежуточных значений фильтров
-  const [localFilters, setLocalFilters] = useState<QualityMapsFilter>(filters);
+  const [localFilters, setLocalFilters] = useState<IQualityMapsFilter>(filters);
 
   // Синхронизируем локальное состояние с примененными фильтрами
   useEffect(() => {
@@ -40,35 +40,35 @@ const QualityMapFilters: React.FC<QualityMapFiltersProps> = ({
   }, [filters]);
 
   const handleSearchChange = useCallback((value: string) => {
-    setLocalFilters(prev => ({
+    setLocalFilters((prev: IQualityMapsFilter) => ({
       ...prev,
       search: value.trim() || undefined,
     }));
   }, []);
 
   const handleTeamChange = useCallback((value: number | null) => {
-    setLocalFilters(prev => ({
+    setLocalFilters((prev: IQualityMapsFilter) => ({
       ...prev,
       team_id: value || undefined,
     }));
   }, []);
 
   const handleGroupChange = useCallback((value: number | null) => {
-    setLocalFilters(prev => ({
+    setLocalFilters((prev: IQualityMapsFilter) => ({
       ...prev,
       group_id: value || undefined,
     }));
   }, []);
 
   const handleCheckerChange = useCallback((value: number | null) => {
-    setLocalFilters(prev => ({
+    setLocalFilters((prev: IQualityMapsFilter) => ({
       ...prev,
       checker_id: value || undefined,
     }));
   }, []);
 
   const handleStartDateChange = useCallback((date: Dayjs | null) => {
-    setLocalFilters(prev => ({
+    setLocalFilters((prev: IQualityMapsFilter) => ({
       ...prev,
       start_date: date ? date.format('YYYY-MM-DD') : undefined,
     }));
@@ -79,9 +79,10 @@ const QualityMapFilters: React.FC<QualityMapFiltersProps> = ({
   }, [localFilters, onApplyFilters]);
 
   const handleResetFilters = useCallback(() => {
-    const resetFilters: QualityMapsFilter = {
+    const resetFilters: IQualityMapsFilter = {
       search: undefined,
       team_id: undefined,
+      user_id: filters.user_id,
       group_id: undefined,
       checker_id: undefined,
       start_date: undefined,
@@ -90,7 +91,7 @@ const QualityMapFilters: React.FC<QualityMapFiltersProps> = ({
     };
     setLocalFilters(resetFilters);
     onResetFilters();
-  }, [filters.per_page, onResetFilters]);
+  }, [filters.per_page, filters.user_id, onResetFilters]);
 
   const teamOptions = useMemo(() => 
     teams.map(team => (

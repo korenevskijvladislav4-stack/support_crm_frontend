@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, type FC } from "react"
+import { useEffect, useCallback, useMemo, type FC } from "react"
 import { useLazyAllUsersQuery, useDeactivateUserMutation, useActivateUserMutation } from "../../api/usersApi"
 import { Table } from "antd"
 import { 
@@ -31,25 +31,54 @@ import { useGetAllTeamsQuery } from "../../api/teamsApi"
 import { useGetAllGroupsQuery } from "../../api/groupsApi"
 import { useGetAllRolesQuery } from "../../api/rolesApi"
 import { UsersPageHeader, UsersFilters } from "../../components/Users"
+import { usePermissions } from "../../hooks/usePermissions"
+import { useUrlFilters } from "../../hooks/useUrlFilters"
+import { PERMISSIONS } from "../../constants/permissions"
 import styles from "../../styles/users/users-page.module.css"
 
 const { Text } = Typography;
 
+// Дефолтные значения фильтров
+const defaultFilters: IUserFilters & { page: number; per_page: number; status: 'active' | 'deactivated' } = {
+  full_name: null,
+  team: [],
+  group: [],
+  roles: [],
+  schedule_type: null,
+  phone: null,
+  email: null,
+  status: 'active',
+  page: 1,
+  per_page: 10,
+};
+
+// Парсеры для URL фильтров (статичные)
+const userFilterParsers = {
+  team: (val: string) => val ? val.split(',').map(Number).filter(n => !isNaN(n)) : [],
+  group: (val: string) => val ? val.split(',').map(Number).filter(n => !isNaN(n)) : [],
+  roles: (val: string) => val ? val.split(',').map(Number).filter(n => !isNaN(n)) : [],
+  page: (val: string) => Number(val) || 1,
+  per_page: (val: string) => Number(val) || 10,
+  status: (val: string) => (val === 'deactivated' ? 'deactivated' : 'active') as 'active' | 'deactivated',
+};
+
 const UsersListPage: FC = () => {
   const { token } = theme.useToken();
-  const [activeTab, setActiveTab] = useState<'active' | 'deactivated'>('active');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [userFiltersForm, setUserFiltersForm] = useState<IUserFilters>({
-    full_name: null,
-    team: [],
-    group: [],
-    roles: [],
-    schedule_type: null,
-    phone: null,
-    email: null,
-    status: 'active'
-  })
+  const { hasPermission } = usePermissions();
+  
+  // Permissions
+  const canUpdate = hasPermission(PERMISSIONS.USERS_UPDATE);
+  const canDeactivate = hasPermission(PERMISSIONS.USERS_DEACTIVATE);
+  const canActivate = hasPermission(PERMISSIONS.USERS_ACTIVATE);
+  
+  // Фильтры с сохранением в URL
+  const { filters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters({
+    defaults: defaultFilters,
+    parsers: userFilterParsers,
+  });
+
+  const activeTab = filters.status;
+  const userFiltersForm = filters;
 
   const [trigger, { data: usersResponse, isLoading, isFetching }] = useLazyAllUsersQuery()
   
@@ -62,76 +91,54 @@ const UsersListPage: FC = () => {
   const [activateUser, { isLoading: isActivating }] = useActivateUserMutation()
 
   // Обработчик применения фильтров
-  const handleApplyFilters = useCallback((filters: IUserFilters) => {
-    const newFilters = {
-      ...filters,
-      status: activeTab,
-    };
-    setUserFiltersForm(newFilters);
-    setCurrentPage(1);
-    trigger({ 
-      ...newFilters, 
+  const handleApplyFilters = useCallback((newFilters: IUserFilters) => {
+    setFilters({
+      ...newFilters,
       page: 1,
-      per_page: pageSize
     });
-  }, [activeTab, pageSize, trigger]);
+  }, [setFilters]);
 
   const handleResetFilters = useCallback(() => {
-    const resetFilters = {
-      full_name: null,
-      team: [],
-      group: [],
-      roles: [],
-      schedule_type: null,
-      phone: null,
-      email: null,
-      status: activeTab
-    };
-    setUserFiltersForm(resetFilters);
-    setCurrentPage(1);
-    trigger({ ...resetFilters, page: 1, per_page: pageSize });
-  }, [activeTab, pageSize, trigger]);
+    resetUrlFilters();
+  }, [resetUrlFilters]);
 
   const handleTabChange = useCallback((key: string) => {
     const newStatus = key as 'active' | 'deactivated';
-    setActiveTab(newStatus);
-    setCurrentPage(1);
-    const newFilters = { ...userFiltersForm, status: newStatus };
-    setUserFiltersForm(newFilters);
-    trigger({ ...newFilters, page: 1, per_page: pageSize });
-  }, [userFiltersForm, pageSize, trigger]);
+    setFilters({ status: newStatus, page: 1 });
+  }, [setFilters]);
 
   const onDeactivateClick = useCallback(async (id: number) => {
     try {
       await deactivateUser(id).unwrap();
       message.success('Пользователь успешно деактивирован');
-      trigger({ ...userFiltersForm, status: activeTab, page: currentPage, per_page: pageSize });
+      trigger(filters);
     } catch (error) {
       message.error('Ошибка при деактивации пользователя');
       console.error('Error deactivating user:', error);
     }
-  }, [deactivateUser, userFiltersForm, activeTab, currentPage, pageSize, trigger]);
+  }, [deactivateUser, filters, trigger]);
 
   const onActivateClick = useCallback(async (id: number) => {
     try {
       await activateUser(id).unwrap();
       message.success('Пользователь успешно активирован');
-      trigger({ ...userFiltersForm, status: activeTab, page: currentPage, per_page: pageSize });
+      trigger(filters);
     } catch (error) {
       message.error('Ошибка при активации пользователя');
       console.error('Error activating user:', error);
     }
-  }, [activateUser, userFiltersForm, activeTab, currentPage, pageSize, trigger]);
+  }, [activateUser, filters, trigger]);
 
+  // Проверка активных фильтров (без учёта status, page, per_page)
   const hasActiveFilters = useMemo((): boolean => {
-    return !!(userFiltersForm.full_name || 
-           (userFiltersForm.team && userFiltersForm.team.length > 0) || 
-           (userFiltersForm.group && userFiltersForm.group.length > 0) || 
-           (userFiltersForm.roles && userFiltersForm.roles.length > 0) ||
-           userFiltersForm.schedule_type ||
-           userFiltersForm.phone ||
-           userFiltersForm.email);
-  }, [userFiltersForm]);
+    return !!(filters.full_name || 
+           (filters.team && filters.team.length > 0) || 
+           (filters.group && filters.group.length > 0) || 
+           (filters.roles && filters.roles.length > 0) ||
+           filters.schedule_type ||
+           filters.phone ||
+           filters.email);
+  }, [filters]);
 
   const getRoleColor = useCallback((role: string) => {
     const roleColors: { [key: string]: string } = {
@@ -145,26 +152,12 @@ const UsersListPage: FC = () => {
   }, []);
 
   const handlePaginationChange = useCallback((page: number, size: number) => {
-    setCurrentPage(page);
-    setPageSize(size);
-    trigger({ 
-      ...userFiltersForm, 
-      status: activeTab,
-      page,
-      per_page: size
-    });
-  }, [userFiltersForm, activeTab, trigger]);
+    setFilters({ page, per_page: size });
+  }, [setFilters]);
 
   const handlePaginationShowSizeChange = useCallback((_current: number, size: number) => {
-    setCurrentPage(1);
-    setPageSize(size);
-    trigger({ 
-      ...userFiltersForm, 
-      status: activeTab,
-      page: 1,
-      per_page: size
-    });
-  }, [userFiltersForm, activeTab, trigger]);
+    setFilters({ page: 1, per_page: size });
+  }, [setFilters]);
 
   const columns: TableColumnsType<IUser> = useMemo(() => [
     {
@@ -333,25 +326,27 @@ const UsersListPage: FC = () => {
             </Link>
           </Tooltip>
           
-          <Tooltip 
-            title="Редактировать"
-            overlayInnerStyle={{ 
-              backgroundColor: token.colorBgElevated,
-              color: token.colorText,
-              border: `1px solid ${token.colorBorder}`
-            }}
-          >
-            <Link to={`/users/${record.id}/edit`}>
-              <Button 
-                type="text" 
-                size="small" 
-                icon={<EditOutlined />}
-                style={{ color: '#52c41a' }}
-              />
-            </Link>
-          </Tooltip>
+          {canUpdate && (
+            <Tooltip 
+              title="Редактировать"
+              overlayInnerStyle={{ 
+                backgroundColor: token.colorBgElevated,
+                color: token.colorText,
+                border: `1px solid ${token.colorBorder}`
+              }}
+            >
+              <Link to={`/users/${record.id}/edit`}>
+                <Button 
+                  type="text" 
+                  size="small" 
+                  icon={<EditOutlined />}
+                  style={{ color: '#52c41a' }}
+                />
+              </Link>
+            </Tooltip>
+          )}
           
-          {activeTab === 'active' ? (
+          {activeTab === 'active' && canDeactivate && (
             <Tooltip 
               title="Деактивировать пользователя"
               styles={{ 
@@ -379,7 +374,9 @@ const UsersListPage: FC = () => {
                 />
               </Popconfirm>
             </Tooltip>
-          ) : (
+          )}
+          
+          {activeTab === 'deactivated' && canActivate && (
             <Tooltip 
               title="Активировать пользователя"
               styles={{ 
@@ -411,23 +408,12 @@ const UsersListPage: FC = () => {
         </Space>
       )
     }
-  ], [token, getRoleColor, activeTab, isActivating, isDeactivating, onActivateClick, onDeactivateClick]);
+  ], [token, getRoleColor, activeTab, isActivating, isDeactivating, onActivateClick, onDeactivateClick, canUpdate, canDeactivate, canActivate]);
 
+  // Загрузка данных при изменении фильтров
   useEffect(() => {
-    const loadUsers = () => trigger({
-      full_name: null,
-      team: [],
-      group: [],
-      roles: [],
-      schedule_type: null,
-      phone: null,
-      email: null,
-      status: activeTab,
-      page: currentPage,
-      per_page: pageSize
-    })
-    loadUsers()
-  }, [trigger, activeTab, currentPage, pageSize])
+    trigger(filters);
+  }, [trigger, filters]);
 
 
 
@@ -435,7 +421,7 @@ const UsersListPage: FC = () => {
     <div className={styles.pageContainer}>
       <UsersPageHeader
         onResetFilters={handleResetFilters}
-        onRefetch={() => trigger({ ...userFiltersForm, status: activeTab, page: currentPage, per_page: pageSize })}
+        onRefetch={() => trigger(filters)}
         hasActiveFilters={hasActiveFilters}
       />
 
@@ -448,7 +434,7 @@ const UsersListPage: FC = () => {
         onResetFilters={handleResetFilters}
         hasActiveFilters={hasActiveFilters}
         loading={isFetching}
-        onRefetch={() => trigger({ ...userFiltersForm, status: activeTab, page: currentPage, per_page: pageSize })}
+        onRefetch={() => trigger(filters)}
       />
 
       {/* Таблица */}

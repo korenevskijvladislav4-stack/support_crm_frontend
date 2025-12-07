@@ -10,42 +10,58 @@ import {
   useCreateDirectShiftMutation,
 } from "../../api/shiftRequestApi";
 import { useTypedSelector } from "../../hooks/store";
+import { usePermissions } from "../../hooks/usePermissions";
+import { useUrlFilters } from "../../hooks/useUrlFilters";
+import { PERMISSIONS } from "../../constants/permissions";
 import { Link } from "react-router-dom";
 import dayjs from "dayjs";
-import {
-  Button,
-  Popover,
-  Typography,
-  Tooltip,
-  theme,
-  type TableColumnsType,
-} from "antd";
-import { ScheduleHeader, ScheduleFilters, ScheduleTable, ShiftCell, EmptyShiftCell } from "../../components/Schedule";
+import { Button, theme } from "antd";
+import { ScheduleHeader, ScheduleFilters, ScheduleTable } from "../../components/Schedule";
 import { RequestShiftModal, EditShiftModal, AddShiftModal } from "../../components/Schedule/Modals";
-import SchedulePopover from "../../components/SchedulePopover";
+import PermissionGuard from "../../components/PermissionGuard";
 import styles from "../../styles/users/users-page.module.css";
-import type { IUserWithShifts } from "../../types/user.types";
-import type { IScheduleFilterForm } from "../../types/schedule.types";
-import type { IShift } from "../../types/shifts.types";
-import { CalendarOutlined, PlusOutlined, CrownOutlined } from "@ant-design/icons";
-import { message } from "antd";
+import type { 
+  IScheduleFilterForm, 
+  IScheduleShift, 
+  IScheduleTableRow,
+  IScheduleUser 
+} from "../../types/schedule.types";
+import { CalendarOutlined, PlusOutlined } from "@ant-design/icons";
+import { message, Typography } from "antd";
 
 const { Text } = Typography;
 
+/**
+ * Оптимизированная страница расписания с поддержкой permissions
+ */
+// Парсеры для URL фильтров (статичные)
+const scheduleFilterParsers = {
+  team_id: (val: string) => val ? Number(val) : null,
+};
+
 const SchedulePage: FC = () => {
   const { token } = theme.useToken();
-  const isDark = token.colorBgBase === '#0d1117';
-  const currentDate = new Date();
   const currentUser = useTypedSelector((state) => state.auth.user);
+  const { hasPermission } = usePermissions();
   
-  const [scheduleFilterForm, setScheduleFilterForm] = useState<IScheduleFilterForm>({
-    month: currentDate.toISOString().slice(0, 7),
-    team_id: currentUser?.team_id,
-    shift_type: "День",
+  // Мемоизируем defaults чтобы избежать бесконечного цикла
+  const scheduleDefaults = useMemo(() => ({
+    month: new Date().toISOString().slice(0, 7),
+    team_id: currentUser?.team_id ?? null,
+    shift_type: "День" as const,
+  }), [currentUser?.team_id]);
+  
+  // Фильтры с сохранением в URL
+  const { filters: scheduleFilterForm, setFilters: setScheduleFilterForm } = useUrlFilters<IScheduleFilterForm>({
+    defaults: scheduleDefaults,
+    parsers: scheduleFilterParsers,
   });
 
+  // API запросы
   const { data: schedule, isLoading, isFetching, refetch: refetchSchedule } = useGetScheduleQuery(scheduleFilterForm);
   const { data: teams, isLoading: isTeamsLoading } = useGetAllTeamsQuery();
+  
+  // Мутации
   const [createShiftRequest, { isLoading: isCreatingRequest }] = useCreateShiftRequestMutation();
   const [approveShiftRequest] = useApproveShiftRequestMutation();
   const [rejectShiftRequest] = useRejectShiftRequestMutation();
@@ -53,11 +69,12 @@ const SchedulePage: FC = () => {
   const [deleteShift] = useDeleteShiftMutation();
   const [createDirectShift] = useCreateDirectShiftMutation();
   
+  // Состояние модалок
   const [requestShiftModalOpen, setRequestShiftModalOpen] = useState(false);
   const [editShiftModalOpen, setEditShiftModalOpen] = useState(false);
   const [addShiftModalOpen, setAddShiftModalOpen] = useState(false);
   const [selectedShiftDate, setSelectedShiftDate] = useState<string | null>(null);
-  const [selectedShift, setSelectedShift] = useState<IShift | null>(null);
+  const [selectedShift, setSelectedShift] = useState<IScheduleShift | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   const shiftTypeOptions = [
@@ -65,9 +82,18 @@ const SchedulePage: FC = () => {
     { label: "Ночь", value: "Ночь" },
   ];
 
-  // Handlers (старые версии удалены, используются мемоизированные)
+  // ============ PERMISSIONS CHECK ============
+  const canCreateRequest = hasPermission(PERMISSIONS.SHIFT_REQUESTS_CREATE);
+  const canCreateDirect = hasPermission(PERMISSIONS.SHIFT_REQUESTS_CREATE_DIRECT);
+  const canApprove = hasPermission(PERMISSIONS.SHIFT_REQUESTS_APPROVE);
+  const canReject = hasPermission(PERMISSIONS.SHIFT_REQUESTS_REJECT);
+  const canUpdate = hasPermission(PERMISSIONS.SHIFT_REQUESTS_UPDATE);
+  const canDelete = hasPermission(PERMISSIONS.SHIFT_REQUESTS_DELETE);
+  const canCreateSchedule = hasPermission(PERMISSIONS.SCHEDULE_CREATE);
 
-  const handleSubmitShiftRequest = async (values: { duration: number }) => {
+  // ============ HANDLERS ============
+  
+  const handleSubmitShiftRequest = useCallback(async (values: { duration: number }) => {
     if (!selectedShiftDate) return;
     
     try {
@@ -84,10 +110,9 @@ const SchedulePage: FC = () => {
       const errorMessage = (error as { data?: { error?: string } })?.data?.error || 'Ошибка при создании запроса на смену';
       message.error(errorMessage);
     }
-  };
+  }, [selectedShiftDate, createShiftRequest, refetchSchedule]);
 
-
-  const handleSubmitEditShift = async (values: { duration: number }) => {
+  const handleSubmitEditShift = useCallback(async (values: { duration: number }) => {
     if (!selectedShift?.user_shift_id) return;
     
     try {
@@ -104,10 +129,9 @@ const SchedulePage: FC = () => {
       const errorMessage = (error as { data?: { error?: string } })?.data?.error || 'Ошибка при редактировании смены';
       message.error(errorMessage);
     }
-  };
+  }, [selectedShift, updateShift, refetchSchedule]);
 
-
-  const handleSubmitAddShiftDirect = async (values: { date: dayjs.Dayjs | string; duration: number; user_id: number }) => {
+  const handleSubmitAddShiftDirect = useCallback(async (values: { date: dayjs.Dayjs | string; duration: number; user_id: number }) => {
     try {
       const dateString = typeof values.date === 'string' 
         ? values.date 
@@ -127,303 +151,146 @@ const SchedulePage: FC = () => {
       const errorMessage = (error as { data?: { error?: string } })?.data?.error || 'Ошибка при добавлении смены';
       message.error(errorMessage);
     }
-  };
+  }, [createDirectShift, refetchSchedule]);
 
-  const handleShiftTypeChange = (value: string) => {
-    setScheduleFilterForm((prev) => ({ ...prev, shift_type: value }));
-  };
+  const handleShiftTypeChange = useCallback((value: string) => {
+    setScheduleFilterForm({ shift_type: value });
+  }, [setScheduleFilterForm]);
 
-  const handleMonthChange = (date: dayjs.Dayjs | null) => {
+  const handleMonthChange = useCallback((date: dayjs.Dayjs | null) => {
     if (date) {
-      const monthValue = date.format('YYYY-MM'); // Формат Y-m для API
-      setScheduleFilterForm((prev) => ({ ...prev, month: monthValue }));
+      setScheduleFilterForm({ month: date.format('YYYY-MM') });
     }
-  };
+  }, [setScheduleFilterForm]);
 
-  const handleTeamChange = (teamId: number | null) => {
-    setScheduleFilterForm((prev) => ({ ...prev, team_id: teamId }));
-  };
+  const handleTeamChange = useCallback((teamId: number | null) => {
+    setScheduleFilterForm({ team_id: teamId });
+  }, [setScheduleFilterForm]);
 
-  // Мемоизация обработчиков для предотвращения лишних ререндеров
-  const handleRequestShiftMemo = useCallback((dayNumber: number) => {
-    const selectedDate = dayjs(scheduleFilterForm.month).date(dayNumber).format('YYYY-MM-DD');
-    setSelectedShiftDate(selectedDate);
-    setRequestShiftModalOpen(true);
-  }, [scheduleFilterForm.month]);
+  // Handlers передаются в таблицу только если есть права
+  const handleRequestShift = useMemo(() => {
+    if (!canCreateRequest) return undefined;
+    return (dayNumber: number) => {
+      const selectedDate = dayjs(scheduleFilterForm.month).date(dayNumber).format('YYYY-MM-DD');
+      setSelectedShiftDate(selectedDate);
+      setRequestShiftModalOpen(true);
+    };
+  }, [canCreateRequest, scheduleFilterForm.month]);
 
-  const handleAddShiftDirectMemo = useCallback((dayNumber: number, userId?: number) => {
-    const selectedDate = dayjs(scheduleFilterForm.month).date(dayNumber).format('YYYY-MM-DD');
-    setSelectedShiftDate(selectedDate);
-    setSelectedUserId(userId || null);
-    setAddShiftModalOpen(true);
-  }, [scheduleFilterForm.month]);
+  const handleAddShiftDirect = useMemo(() => {
+    if (!canCreateDirect) return undefined;
+    return (dayNumber: number, userId: number) => {
+      const selectedDate = dayjs(scheduleFilterForm.month).date(dayNumber).format('YYYY-MM-DD');
+      setSelectedShiftDate(selectedDate);
+      setSelectedUserId(userId);
+      setAddShiftModalOpen(true);
+    };
+  }, [canCreateDirect, scheduleFilterForm.month]);
 
-  const handleApproveShiftMemo = useCallback(async (userShiftId: number) => {
-    try {
-      await approveShiftRequest(userShiftId).unwrap();
-      message.success('Смена успешно одобрена');
-      refetchSchedule();
-    } catch (error: unknown) {
-      const errorMessage = (error as { data?: { error?: string } })?.data?.error || 'Ошибка при одобрении смены';
-      message.error(errorMessage);
-    }
-  }, [approveShiftRequest, refetchSchedule]);
+  const handleApproveShift = useMemo(() => {
+    if (!canApprove) return undefined;
+    return async (userShiftId: number) => {
+      try {
+        await approveShiftRequest(userShiftId).unwrap();
+        message.success('Смена успешно одобрена');
+        refetchSchedule();
+      } catch (error: unknown) {
+        const errorMessage = (error as { data?: { error?: string } })?.data?.error || 'Ошибка при одобрении смены';
+        message.error(errorMessage);
+      }
+    };
+  }, [canApprove, approveShiftRequest, refetchSchedule]);
 
-  const handleRejectShiftMemo = useCallback(async (userShiftId: number) => {
-    try {
-      await rejectShiftRequest(userShiftId).unwrap();
-      message.success('Смена успешно отклонена');
-      refetchSchedule();
-    } catch (error: unknown) {
-      const errorMessage = (error as { data?: { error?: string } })?.data?.error || 'Ошибка при отклонении смены';
-      message.error(errorMessage);
-    }
-  }, [rejectShiftRequest, refetchSchedule]);
+  const handleRejectShift = useMemo(() => {
+    if (!canReject) return undefined;
+    return async (userShiftId: number) => {
+      try {
+        await rejectShiftRequest(userShiftId).unwrap();
+        message.success('Смена успешно отклонена');
+        refetchSchedule();
+      } catch (error: unknown) {
+        const errorMessage = (error as { data?: { error?: string } })?.data?.error || 'Ошибка при отклонении смены';
+        message.error(errorMessage);
+      }
+    };
+  }, [canReject, rejectShiftRequest, refetchSchedule]);
 
-  const handleEditShiftMemo = useCallback((shift: IShift) => {
-    setSelectedShift(shift);
-    setEditShiftModalOpen(true);
-  }, []);
+  const handleEditShift = useMemo(() => {
+    if (!canUpdate) return undefined;
+    return (shift: IScheduleShift) => {
+      setSelectedShift(shift);
+      setEditShiftModalOpen(true);
+    };
+  }, [canUpdate]);
 
-  const handleDeleteShiftMemo = useCallback(async (userShiftId: number | undefined) => {
-    if (!userShiftId) {
-      message.error('Не указан ID смены для удаления');
-      return;
+  const handleDeleteShift = useMemo(() => {
+    if (!canDelete) return undefined;
+    return async (userShiftId: number) => {
+      try {
+        await deleteShift(userShiftId).unwrap();
+        message.success('Смена успешно удалена');
+        refetchSchedule();
+      } catch (error: unknown) {
+        const errorMessage = (error as { data?: { error?: string } })?.data?.error || 'Ошибка при удалении смены';
+        message.error(errorMessage);
+      }
+    };
+  }, [canDelete, deleteShift, refetchSchedule]);
+
+  // ============ MEMOIZED DATA ============
+
+  // Данные таблицы: сортировка с supervisors в начале каждой группы
+  const tableData = useMemo((): IScheduleTableRow[] => {
+    if (!schedule?.users || !schedule?.groups) return [];
+    
+    const usersMap = new Map<number, IScheduleUser>();
+    for (const user of schedule.users) {
+      usersMap.set(user.id, user);
     }
     
-    try {
-      await deleteShift(userShiftId).unwrap();
-      message.success('Смена успешно удалена');
-      refetchSchedule();
-    } catch (error: unknown) {
-      const errorMessage = (error as { data?: { error?: string } })?.data?.error || 'Ошибка при удалении смены';
-      message.error(errorMessage);
-    }
-  }, [deleteShift, refetchSchedule]);
-
-  // Оптимизация: создаем Map для быстрого поиска смен по дате
-  const shiftsByUserAndDate = useMemo(() => {
-    if (!schedule?.groups) return new Map<string, IShift>();
+    const result: IScheduleTableRow[] = [];
     
-    const map = new Map<string, IShift>();
-    schedule.groups.forEach(group => {
-      group.users.forEach(user => {
-        user.shifts.forEach(shift => {
-          const key = `${user.id}-${new Date(shift.date).getDate()}`;
-          map.set(key, shift);
-        });
+    for (const group of schedule.groups) {
+      const supervisorId = group.supervisor_id;
+      const groupUsers: IScheduleTableRow[] = [];
+      
+      for (const userId of group.user_ids) {
+        const user = usersMap.get(userId);
+        if (user) {
+          groupUsers.push({
+            id: user.id,
+            name: user.name,
+            surname: user.surname,
+            group_id: user.group_id,
+            total_hours: user.total_hours,
+            is_supervisor: user.id === supervisorId,
+          });
+        }
+      }
+      
+      groupUsers.sort((a, b) => {
+        if (a.is_supervisor) return -1;
+        if (b.is_supervisor) return 1;
+        return 0;
       });
-    });
-    return map;
-  }, [schedule]);
-
-  // Генерация колонок с датами (мемоизировано)
-  const dateColumns = useMemo((): TableColumnsType<IUserWithShifts> => {
-    const daysInMonth = schedule?.days_in_month ?? 0;
-    
-    return Array.from({ length: daysInMonth }, (_, dayIndex) => {
-      const dayNumber = dayIndex + 1;
-      const currentDay = dayjs(scheduleFilterForm.month).date(dayNumber);
-      const isWeekend = currentDay.day() === 0 || currentDay.day() === 6;
-      const isToday = currentDay.isSame(dayjs(), 'day');
-      const dateString = currentDay.format('DD.MM.YYYY');
       
-      return {
-        id: dayNumber,
-        key: `day_${dayNumber}`,
-        title: (
-          <Tooltip 
-            title={dateString}
-            overlayInnerStyle={{ 
-              backgroundColor: token.colorBgElevated,
-              color: token.colorText,
-              border: `1px solid ${token.colorBorder}`
-            }}
-          >
-            <div style={{
-              padding: '6px 4px',
-              background: isToday 
-                ? token.colorPrimary 
-                : isWeekend 
-                  ? (isDark ? '#3d2816' : '#fff7e6')
-                  : 'transparent',
-              color: isToday 
-                ? '#ffffff' 
-                : isWeekend 
-                  ? (isDark ? '#ffa940' : '#d46b08')
-                  : token.colorText,
-              borderRadius: 4,
-              fontWeight: isToday ? 600 : isWeekend ? 500 : 400,
-              fontSize: 13,
-            }}>
-              {dayNumber}
-            </div>
-          </Tooltip>
-        ),
-        width: 50,
-        align: "center" as const,
-        render: (_: number, record: IUserWithShifts) => {
-          const key = `${record.id}-${dayNumber}`;
-          const shift = shiftsByUserAndDate.get(key);
-
-          if (!shift) {
-            return (
-              <EmptyShiftCell
-                dayNumber={dayNumber}
-                record={record}
-                onRequestShift={handleRequestShiftMemo}
-                onAddShift={handleAddShiftDirectMemo}
-              />
-            );
-          }
-
-          return (
-            <ShiftCell
-              shift={shift}
-              record={record}
-              currentUser={currentUser || undefined}
-              onApprove={handleApproveShiftMemo}
-              onReject={handleRejectShiftMemo}
-              onEdit={handleEditShiftMemo}
-              onDelete={handleDeleteShiftMemo}
-            />
-          );
-        },
-      };
-    });
-  }, [schedule?.days_in_month, scheduleFilterForm.month, shiftsByUserAndDate, token, isDark, currentUser, handleRequestShiftMemo, handleAddShiftDirectMemo, handleApproveShiftMemo, handleRejectShiftMemo, handleEditShiftMemo, handleDeleteShiftMemo]);
-
-  // Мемоизация данных таблицы с сортировкой: сначала ответственный, затем остальные
-  const tableData = useMemo(() => {
-    if (!schedule?.groups) return [];
+      result.push(...groupUsers);
+    }
     
-    return schedule.groups.flatMap((group) => {
-      if (!group.users || group.users.length === 0) return [];
-      
-      // Если есть ответственный, сортируем: сначала ответственный, затем остальные
-      if (group.supervisor?.id) {
-        const supervisor = group.users.find(user => user.id === group.supervisor?.id);
-        const subordinates = group.users.filter(user => user.id !== group.supervisor?.id);
-        
-        return supervisor 
-          ? [supervisor, ...subordinates]
-          : group.users;
-      }
-      
-      return group.users;
-    });
-  }, [schedule?.groups]);
+    return result;
+  }, [schedule?.users, schedule?.groups]);
 
-  // Мемоизация карты ответственных по группам
-  const supervisorMap = useMemo(() => {
-    const map = new Map<number, boolean>();
-    if (!schedule?.groups) return map;
-    
-    schedule.groups.forEach(group => {
-      if (group.supervisor?.id && group.users) {
-        group.users.forEach(user => {
-          map.set(user.id, user.id === group.supervisor?.id);
-        });
-      }
-    });
-    
-    return map;
-  }, [schedule?.groups]);
-
-  // Мемоизация расчета часов для каждого пользователя
-  const userHoursMap = useMemo(() => {
-    if (!tableData) return new Map<number, number>();
-    
-    const map = new Map<number, number>();
-    tableData.forEach(user => {
-      const totalHours = user.shifts.reduce((sum, shift) => sum + shift.duration, 0);
-      map.set(user.id, totalHours);
-    });
-    return map;
+  // Пользователи для модалки добавления смены
+  const usersForModal = useMemo(() => {
+    return tableData.map(u => ({
+      id: u.id,
+      name: u.name,
+      surname: u.surname,
+      shifts: [] as never[],
+    }));
   }, [tableData]);
 
-  // Основные колонки таблицы (мемоизировано)
-  const tableColumns = useMemo((): TableColumnsType<IUserWithShifts> => [
-    {
-      title: "Сотрудник",
-      dataIndex: "name",
-      fixed: "left",
-      width: 200,
-      render: (_: number, record: IUserWithShifts) => (
-        <Popover
-          content={<SchedulePopover email={record.email} group={record.group} />}
-          title={`Сотрудник #${record.id}`}
-          trigger="hover"
-        >
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 10,
-            cursor: 'pointer',
-            padding: '4px 0'
-          }}>
-            <div style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: 12,
-              fontWeight: 600,
-              flexShrink: 0
-            }}>
-              {record.name?.[0]}{record.surname?.[0]}
-            </div>
-            <div style={{ textAlign: 'left', minWidth: 0, flex: 1 }}>
-              <div style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontWeight: 500, 
-                fontSize: 14, 
-                color: token.colorText,
-                lineHeight: 1.4,
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis', 
-                whiteSpace: 'nowrap' 
-              }}>
-                {supervisorMap.get(record.id) && (
-                  <CrownOutlined style={{ color: '#faad14', fontSize: 14, flexShrink: 0 }} />
-                )}
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {record.name} {record.surname}
-                </span>
-              </div>
-              <Text type="secondary" style={{ fontSize: 12 }}>{record.group}</Text>
-            </div>
-          </div>
-        </Popover>
-      ),
-    },
-    ...dateColumns,
-    {
-      title: "Часов",
-      align: "center",
-      fixed: 'right',
-      width: 80,
-      render: (_: number, record: IUserWithShifts) => {
-        const totalHours = userHoursMap.get(record.id) || 0;
-        return (
-          <div style={{ 
-            fontSize: 15,
-            fontWeight: 600,
-            color: totalHours >= 160 ? '#52c41a' : totalHours >= 120 ? '#faad14' : '#8c8c8c'
-          }}>
-            {totalHours}
-          </div>
-        );
-      },
-    },
-  ], [dateColumns, userHoursMap, token.colorText, supervisorMap]);
-
+  // ============ RENDER ============
 
   const emptyTableText = (
     <div className={styles.emptyTableContainer}>
@@ -434,17 +301,22 @@ const SchedulePage: FC = () => {
       <Text type="secondary" className={styles.emptyTableDescription}>
         На данный момент нет данных о графике смен
       </Text>
-      <Link to="./create">
-        <Button type="primary" size="large" icon={<PlusOutlined />}>
-          Сгенерировать график
-        </Button>
-      </Link>
+      <PermissionGuard permission={PERMISSIONS.SCHEDULE_CREATE}>
+        <Link to="./create">
+          <Button type="primary" size="large" icon={<PlusOutlined />}>
+            Сгенерировать график
+          </Button>
+        </Link>
+      </PermissionGuard>
     </div>
   );
 
   return (
     <div className={styles.pageContainer}>
-      <ScheduleHeader onRefetch={refetchSchedule} />
+      <ScheduleHeader 
+        onRefetch={refetchSchedule} 
+        canCreateSchedule={canCreateSchedule}
+      />
 
       <ScheduleFilters
         filterForm={scheduleFilterForm}
@@ -459,12 +331,23 @@ const SchedulePage: FC = () => {
       />
 
       <ScheduleTable
-        columns={tableColumns}
         data={tableData}
+        shifts={schedule?.shifts ?? {}}
+        daysInMonth={schedule?.days_in_month ?? 0}
+        month={scheduleFilterForm.month}
+        currentUserId={currentUser?.id}
         loading={isLoading || isFetching}
         emptyText={emptyTableText}
+        onRequestShift={handleRequestShift}
+        onAddShift={handleAddShiftDirect}
+        onApprove={handleApproveShift}
+        onReject={handleRejectShift}
+        onEdit={handleEditShift}
+        onDelete={handleDeleteShift}
       />
 
+      {/* Модалки показываются только если есть права */}
+      {canCreateRequest && (
         <RequestShiftModal
           open={requestShiftModalOpen}
           onCancel={() => {
@@ -475,7 +358,9 @@ const SchedulePage: FC = () => {
           selectedDate={selectedShiftDate}
           loading={isCreatingRequest}
         />
+      )}
 
+      {canUpdate && (
         <EditShiftModal
           open={editShiftModalOpen}
           onCancel={() => {
@@ -485,7 +370,9 @@ const SchedulePage: FC = () => {
           onSubmit={handleSubmitEditShift}
           selectedShift={selectedShift}
         />
+      )}
 
+      {canCreateDirect && (
         <AddShiftModal
           open={addShiftModalOpen}
           onCancel={() => {
@@ -496,8 +383,9 @@ const SchedulePage: FC = () => {
           onSubmit={handleSubmitAddShiftDirect}
           selectedDate={selectedShiftDate}
           selectedUserId={selectedUserId}
-          users={tableData}
+          users={usersForModal}
         />
+      )}
     </div>
   );
 };

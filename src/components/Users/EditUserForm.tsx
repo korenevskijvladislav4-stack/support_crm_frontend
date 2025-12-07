@@ -2,10 +2,10 @@ import React from 'react';
 import { Card, Form, Input, Select, Row, Col, Divider, Space, Button, Typography } from 'antd';
 import { UserOutlined, MailOutlined, TeamOutlined, SafetyCertificateOutlined, CalendarOutlined, SaveOutlined, PhoneOutlined } from '@ant-design/icons';
 import type { IUserForm } from '../../types/user.types';
-import type { ITeam } from '../../types/teams.type';
-import type { IGroup } from '../../types/groups.types';
+import type { ITeam } from '../../types/team.types';
+import type { IGroup } from '../../types/group.types';
 import type { IRole } from '../../types/role.types';
-import type { IScheduleType } from '../../types/schedule-type.types';
+import type { IScheduleType } from '../../types/schedule.types';
 import styles from '../../styles/users/edit-user.module.css';
 
 const { Text } = Typography;
@@ -106,7 +106,7 @@ const EditUserForm: React.FC<EditUserFormProps> = ({
                 value={form.team_id}
                 onChange={(value) => {
                   const newTeam = teams?.find(t => t.id === value);
-                  const newTeamRoleIds = newTeam?.roles.map(r => r.id) || [];
+                  const newTeamRoleIds = newTeam?.roles?.map(r => r.id) || [];
                   const validRoles = form.roles.filter(roleId => newTeamRoleIds.includes(roleId));
                   
                   onFormChange('team_id', value);

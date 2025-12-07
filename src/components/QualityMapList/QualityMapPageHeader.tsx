@@ -15,12 +15,14 @@ interface QualityMapPageHeaderProps {
   onResetFilters: () => void;
   onRefetch?: () => void;
   hasActiveFilters: boolean;
+  canCreate?: boolean;
 }
 
 const QualityMapPageHeader: React.FC<QualityMapPageHeaderProps> = ({
   onResetFilters,
   onRefetch,
-  hasActiveFilters
+  hasActiveFilters,
+  canCreate = false
 }) => {
   const { token } = theme.useToken();
 
@@ -59,11 +61,13 @@ const QualityMapPageHeader: React.FC<QualityMapPageHeaderProps> = ({
               Обновить
             </Button>
           )}
-          <Link to="/quality/create">
-            <Button type="primary" icon={<PlusOutlined />} size="middle">
-              Создать карту
-            </Button>
-          </Link>
+          {canCreate && (
+            <Link to="/quality/create">
+              <Button type="primary" icon={<PlusOutlined />} size="middle">
+                Создать карту
+              </Button>
+            </Link>
+          )}
         </Space>
       </div>
     </div>
@@ -71,4 +75,3 @@ const QualityMapPageHeader: React.FC<QualityMapPageHeaderProps> = ({
 };
 
 export default QualityMapPageHeader;
-

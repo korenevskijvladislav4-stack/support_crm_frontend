@@ -15,7 +15,7 @@ import { useEffect, useState, type FC } from "react";
 import { useApproveAttemptMutation, useGetAttemptQuery } from '../../api/attemptsApi';
 import { useNavigate, useParams } from 'react-router-dom';
 import { skipToken } from '@reduxjs/toolkit/query';
-import type { IAttemptForm } from '../../types/attempts.types';
+import type { IAttemptForm } from '../../types/attempt.types';
 import { useGetAllGroupsQuery } from '../../api/groupsApi';
 import { useGetAllTeamsQuery } from '../../api/teamsApi';
 import { useGetAllRolesQuery } from '../../api/rolesApi';
@@ -45,7 +45,6 @@ const AttemptApprovePage: FC = () => {
     surname: '',
     email: '',
     phone: '',
-    created_at: new Date(),
     roles: [],
     team_id: null,
     group_id: null,
@@ -209,7 +208,7 @@ const AttemptApprovePage: FC = () => {
             onFormChange={(field, value) => {
               if (field === 'team_id') {
                 const newTeam = teams?.find(t => t.id === (value as number));
-                const newTeamRoleIds = newTeam?.roles.map(r => r.id) || [];
+                const newTeamRoleIds = newTeam?.roles?.map(r => r.id) || [];
                 const validRoles = attemptForm.roles.filter(roleId => newTeamRoleIds.includes(roleId));
                 setAttemptForm(prev => ({ ...prev, team_id: value as number | null, roles: validRoles }));
               } else {
