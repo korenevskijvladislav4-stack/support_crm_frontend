@@ -1,27 +1,16 @@
 import React from 'react';
-import { Button, Space, Typography } from 'antd';
-import { Link } from 'react-router-dom';
+import { Typography } from 'antd';
 import {
-  UserOutlined,
-  ReloadOutlined,
-  PlusOutlined
+  UserOutlined
 } from '@ant-design/icons';
 import { theme } from 'antd';
 import styles from '../../styles/users/users-page.module.css';
 
 const { Title, Text } = Typography;
 
-interface UsersPageHeaderProps {
-  onResetFilters: () => void;
-  onRefetch?: () => void;
-  hasActiveFilters: boolean;
-}
+interface UsersPageHeaderProps {}
 
-const UsersPageHeader: React.FC<UsersPageHeaderProps> = ({
-  onResetFilters,
-  onRefetch,
-  hasActiveFilters
-}) => {
+const UsersPageHeader: React.FC<UsersPageHeaderProps> = () => {
   const { token } = theme.useToken();
 
   return (
@@ -40,31 +29,6 @@ const UsersPageHeader: React.FC<UsersPageHeaderProps> = ({
             Управление пользователями и их правами доступа
           </Text>
         </div>
-        
-        <Space size="middle" wrap>
-          <Button 
-            icon={<ReloadOutlined />} 
-            onClick={onResetFilters}
-            disabled={!hasActiveFilters}
-            size="middle"
-          >
-            Сбросить
-          </Button>
-          {onRefetch && (
-            <Button 
-              icon={<ReloadOutlined />}
-              onClick={onRefetch}
-              size="middle"
-            >
-              Обновить
-            </Button>
-          )}
-          <Link to="/users/create">
-            <Button type="primary" icon={<PlusOutlined />} size="middle">
-              Добавить
-            </Button>
-          </Link>
-        </Space>
       </div>
     </div>
   );

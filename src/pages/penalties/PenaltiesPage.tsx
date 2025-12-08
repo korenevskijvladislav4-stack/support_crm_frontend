@@ -72,10 +72,10 @@ const PenaltiesPage: FC = () => {
   const { hasPermission } = usePermissions();
   
   // Permissions
-  const canCreate = hasPermission(PERMISSIONS.PENALTIES_CREATE);
-  const canUpdate = hasPermission(PERMISSIONS.PENALTIES_UPDATE);
-  const canApprove = hasPermission(PERMISSIONS.PENALTIES_APPROVE);
-  const canReject = hasPermission(PERMISSIONS.PENALTIES_REJECT);
+  const canCreate = hasPermission(PERMISSIONS.PENALTIES_MANAGE);
+  const canUpdate = hasPermission(PERMISSIONS.PENALTIES_MANAGE);
+  const canApprove = hasPermission(PERMISSIONS.PENALTIES_MANAGE);
+  const canReject = hasPermission(PERMISSIONS.PENALTIES_MANAGE);
 
   // Фильтры с сохранением в URL
   const { filters: urlFilters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters({
@@ -290,11 +290,10 @@ const PenaltiesPage: FC = () => {
     {
       title: 'Пользователь',
       width: 200,
-      align: 'center',
       render: (_, record) => {
         const initials = record.user?.fullname?.split(' ').map(n => n[0]).join('') || '?';
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{
               width: 32,
               height: 32,
@@ -553,9 +552,6 @@ const PenaltiesPage: FC = () => {
   return (
     <div className={styles.pageContainer}>
       <PenaltiesPageHeader
-        onResetFilters={handleResetFilters}
-        onRefetch={refetch}
-        hasActiveFilters={hasActiveFilters}
         onCreateClick={showCreateModal}
         canCreate={canCreate}
       />

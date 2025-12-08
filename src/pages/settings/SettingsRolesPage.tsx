@@ -78,9 +78,9 @@ const SettingsRolesPage: FC = () => {
   }, [filters.search]);
 
   // Permissions
-  const canCreate = hasPermission(PERMISSIONS.ROLES_CREATE);
-  const canUpdate = hasPermission(PERMISSIONS.ROLES_UPDATE);
-  const canDelete = hasPermission(PERMISSIONS.ROLES_DELETE);
+  const canCreate = hasPermission(PERMISSIONS.ROLES_MANAGE);
+  const canUpdate = hasPermission(PERMISSIONS.ROLES_MANAGE);
+  const canDelete = hasPermission(PERMISSIONS.ROLES_MANAGE);
 
   // API запросы с серверной фильтрацией
   const [trigger, { data: rolesResponse, isLoading, isFetching }] = useLazyGetRolesQuery();

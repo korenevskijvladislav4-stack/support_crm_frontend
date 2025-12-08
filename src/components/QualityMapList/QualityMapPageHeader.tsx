@@ -3,7 +3,6 @@ import { Button, Space, Typography } from 'antd';
 import { Link } from 'react-router-dom';
 import {
   LineChartOutlined,
-  ReloadOutlined,
   PlusOutlined
 } from '@ant-design/icons';
 import { theme } from 'antd';
@@ -12,16 +11,10 @@ import styles from '../../styles/users/users-page.module.css';
 const { Title, Text } = Typography;
 
 interface QualityMapPageHeaderProps {
-  onResetFilters: () => void;
-  onRefetch?: () => void;
-  hasActiveFilters: boolean;
   canCreate?: boolean;
 }
 
 const QualityMapPageHeader: React.FC<QualityMapPageHeaderProps> = ({
-  onResetFilters,
-  onRefetch,
-  hasActiveFilters,
   canCreate = false
 }) => {
   const { token } = theme.useToken();
@@ -44,23 +37,6 @@ const QualityMapPageHeader: React.FC<QualityMapPageHeaderProps> = ({
         </div>
         
         <Space size="middle" wrap>
-          <Button 
-            icon={<ReloadOutlined />} 
-            onClick={onResetFilters}
-            disabled={!hasActiveFilters}
-            size="middle"
-          >
-            Сбросить
-          </Button>
-          {onRefetch && (
-            <Button 
-              icon={<ReloadOutlined />}
-              onClick={onRefetch}
-              size="middle"
-            >
-              Обновить
-            </Button>
-          )}
           {canCreate && (
             <Link to="/quality/create">
               <Button type="primary" icon={<PlusOutlined />} size="middle">

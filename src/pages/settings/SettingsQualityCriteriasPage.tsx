@@ -97,9 +97,9 @@ const SettingsQualityCriteriasPage: React.FC = () => {
   }, [filters.search, filters.team_id, filters.is_global, filters.status]);
 
   // Permissions
-  const canCreate = hasPermission(PERMISSIONS.QUALITY_CRITERIA_CREATE);
-  const canUpdate = hasPermission(PERMISSIONS.QUALITY_CRITERIA_UPDATE);
-  const canDelete = hasPermission(PERMISSIONS.QUALITY_CRITERIA_DELETE);
+  const canCreate = hasPermission(PERMISSIONS.QUALITY_CRITERIA_MANAGE);
+  const canUpdate = hasPermission(PERMISSIONS.QUALITY_CRITERIA_MANAGE);
+  const canDelete = hasPermission(PERMISSIONS.QUALITY_CRITERIA_MANAGE);
 
   // API запросы с серверной фильтрацией
   const [trigger, { data: criteriasResponse, isLoading, isFetching }] = useLazyGetQualityCriteriasQuery();

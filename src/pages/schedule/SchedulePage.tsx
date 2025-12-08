@@ -83,13 +83,16 @@ const SchedulePage: FC = () => {
   ];
 
   // ============ PERMISSIONS CHECK ============
-  const canCreateRequest = hasPermission(PERMISSIONS.SHIFT_REQUESTS_CREATE);
-  const canCreateDirect = hasPermission(PERMISSIONS.SHIFT_REQUESTS_CREATE_DIRECT);
-  const canApprove = hasPermission(PERMISSIONS.SHIFT_REQUESTS_APPROVE);
-  const canReject = hasPermission(PERMISSIONS.SHIFT_REQUESTS_REJECT);
-  const canUpdate = hasPermission(PERMISSIONS.SHIFT_REQUESTS_UPDATE);
-  const canDelete = hasPermission(PERMISSIONS.SHIFT_REQUESTS_DELETE);
-  const canCreateSchedule = hasPermission(PERMISSIONS.SCHEDULE_CREATE);
+  const canManageSchedule = hasPermission(PERMISSIONS.SCHEDULE_MANAGE) || hasPermission(PERMISSIONS.SHIFT_REQUESTS_MANAGE);
+  // view: смотреть график, создавать запрос себе, удалять свой pending
+  const canCreateRequest = canManageSchedule || hasPermission(PERMISSIONS.SCHEDULE_VIEW) || hasPermission(PERMISSIONS.SHIFT_REQUESTS_VIEW);
+  // direct/approve/reject/edit/delete (чужие) — только manage
+  const canCreateDirect = canManageSchedule;
+  const canApprove = canManageSchedule;
+  const canReject = canManageSchedule;
+  const canUpdate = canManageSchedule;
+  const canDelete = canManageSchedule || hasPermission(PERMISSIONS.SCHEDULE_VIEW) || hasPermission(PERMISSIONS.SHIFT_REQUESTS_VIEW);
+  const canCreateSchedule = hasPermission(PERMISSIONS.SCHEDULE_MANAGE);
 
   // ============ HANDLERS ============
   
@@ -301,7 +304,7 @@ const SchedulePage: FC = () => {
       <Text type="secondary" className={styles.emptyTableDescription}>
         На данный момент нет данных о графике смен
       </Text>
-      <PermissionGuard permission={PERMISSIONS.SCHEDULE_CREATE}>
+      <PermissionGuard permission={PERMISSIONS.SCHEDULE_MANAGE}>
         <Link to="./create">
           <Button type="primary" size="large" icon={<PlusOutlined />}>
             Сгенерировать график
@@ -336,6 +339,7 @@ const SchedulePage: FC = () => {
         daysInMonth={schedule?.days_in_month ?? 0}
         month={scheduleFilterForm.month}
         currentUserId={currentUser?.id}
+        canManage={canManageSchedule}
         loading={isLoading || isFetching}
         emptyText={emptyTableText}
         onRequestShift={handleRequestShift}

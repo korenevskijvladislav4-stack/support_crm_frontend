@@ -43,6 +43,64 @@ export interface ITeamFilters extends IBaseFilter {
 export type TeamsResponse = IPaginatedResponse<ITeam>;
 
 /**
+ * Статистика по командам
+ */
+export interface ITeamStats {
+  id: number;
+  name: string;
+  users: {
+    count: number;
+  };
+  groups: {
+    count: number;
+    items?: {
+      id: number;
+      name?: string;
+      shift?: {
+        type?: string | null;
+        number?: string | null;
+      };
+      supervisor?: {
+        id: number;
+        name: string;
+        surname?: string;
+        full_name: string;
+      } | null;
+      users: {
+        count: number;
+      };
+      quality: {
+        avg: number | null;
+        checks_count: number;
+      };
+      penalties: {
+        count: number;
+        hours: number;
+      };
+    }[];
+  };
+  quality: {
+    avg: number | null;
+    checks_count: number;
+  };
+  penalties: {
+    count: number;
+    hours: number;
+  };
+}
+
+export interface ITeamStatsFilters extends IBaseFilter {
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  per_page?: number;
+  [key: string]: string | number | boolean | undefined;
+}
+
+export type TeamStatsResponse = IPaginatedResponse<ITeamStats>;
+
+/**
  * Команда с pivot-данными (для связей many-to-many)
  */
 export interface ITeamWithPivot extends ITeamShort {

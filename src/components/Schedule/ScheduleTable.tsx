@@ -11,6 +11,7 @@ interface ShiftCellProps {
   shift: IScheduleShift;
   userId: number;
   currentUserId?: number;
+  canManage?: boolean;
   onApprove?: (id: number) => void;
   onReject?: (id: number) => void;
   onEdit?: (shift: IScheduleShift) => void;
@@ -21,6 +22,7 @@ const ShiftCellComponent: FC<ShiftCellProps> = ({
   shift,
   userId,
   currentUserId,
+  canManage = false,
   onApprove,
   onReject,
   onEdit,
@@ -44,19 +46,21 @@ const ShiftCellComponent: FC<ShiftCellProps> = ({
     const items: MenuProps['items'] = [];
 
     if (shift.status === 'pending' && hasUserShiftId) {
-      items.push(
-        {
+      if (canManage && onApprove) {
+        items.push({
           key: 'approve',
           label: <Space><CheckOutlined style={{ color: '#52c41a' }} /><span>Одобрить</span></Space>,
           onClick: () => onApprove?.(shift.user_shift_id!),
-        },
-        {
+        });
+      }
+      if (canManage && onReject) {
+        items.push({
           key: 'reject',
           label: <Space><CloseOutlined style={{ color: '#ff4d4f' }} /><span>Отклонить</span></Space>,
           onClick: () => onReject?.(shift.user_shift_id!),
-        }
-      );
-      if (isCurrentUser) {
+        });
+      }
+      if (isCurrentUser && onDelete) {
         items.push({
           key: 'delete',
           label: <Space><DeleteOutlined style={{ color: '#ff4d4f' }} /><span>Удалить запрос</span></Space>,
@@ -65,23 +69,25 @@ const ShiftCellComponent: FC<ShiftCellProps> = ({
       }
     }
 
-    if (shift.status === 'approved' && hasUserShiftId) {
-      items.push(
-        {
+    if (shift.status === 'approved' && hasUserShiftId && canManage) {
+      if (onEdit) {
+        items.push({
           key: 'edit',
           label: <Space><EditOutlined /><span>Редактировать</span></Space>,
           onClick: () => onEdit?.(shift),
-        },
-        {
+        });
+      }
+      if (onDelete) {
+        items.push({
           key: 'delete',
           label: <Space><DeleteOutlined style={{ color: '#ff4d4f' }} /><span>Удалить</span></Space>,
           onClick: () => onDelete?.(shift.user_shift_id!),
-        }
-      );
+        });
+      }
     }
 
     return items;
-  }, [shift, hasUserShiftId, isCurrentUser, onApprove, onReject, onEdit, onDelete]);
+  }, [shift, hasUserShiftId, isCurrentUser, canManage, onApprove, onReject, onEdit, onDelete]);
 
   const content = (
     <div className={`${styles.shiftCell} ${cellClassName}`}>
@@ -188,6 +194,7 @@ interface ScheduleTableProps {
   daysInMonth: number;
   month: string;
   currentUserId?: number;
+  canManage?: boolean;
   loading?: boolean;
   emptyText?: React.ReactNode;
   onRequestShift?: (dayNumber: number) => void;
@@ -204,6 +211,7 @@ export const ScheduleTable: FC<ScheduleTableProps> = memo(({
   daysInMonth,
   month,
   currentUserId,
+  canManage = false,
   loading,
   emptyText,
   onRequestShift,
@@ -257,6 +265,7 @@ export const ScheduleTable: FC<ScheduleTableProps> = memo(({
               shift={shift}
               userId={record.id}
               currentUserId={currentUserId}
+              canManage={canManage}
               onApprove={onApprove}
               onReject={onReject}
               onEdit={onEdit}
@@ -266,7 +275,7 @@ export const ScheduleTable: FC<ScheduleTableProps> = memo(({
         },
       };
     });
-  }, [daysInMonth, month, shifts, currentUserId, onRequestShift, onAddShift, onApprove, onReject, onEdit, onDelete]);
+  }, [daysInMonth, month, shifts, currentUserId, canManage, onRequestShift, onAddShift, onApprove, onReject, onEdit, onDelete]);
 
   // Колонка сотрудника
   const employeeColumn = useMemo(() => ({

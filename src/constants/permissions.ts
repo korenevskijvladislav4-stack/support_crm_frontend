@@ -7,103 +7,83 @@
 export const PERMISSIONS = {
   // Users
   USERS_VIEW: 'users.view',
-  USERS_CREATE: 'users.create',
-  USERS_UPDATE: 'users.update',
-  USERS_DELETE: 'users.delete',
-  USERS_DEACTIVATE: 'users.deactivate',
-  USERS_ACTIVATE: 'users.activate',
-  USERS_TRANSFER: 'users.transfer',
+  USERS_VIEW_OWN: 'users.view-own',
+  USERS_MANAGE: 'users.manage',
 
   // Attempts
   ATTEMPTS_VIEW: 'attempts.view',
-  ATTEMPTS_APPROVE: 'attempts.approve',
-  ATTEMPTS_DELETE: 'attempts.delete',
+  ATTEMPTS_MANAGE: 'attempts.manage',
 
   // Teams
-  TEAMS_LIST: 'teams.list',     // Для API (select, фильтры)
-  TEAMS_VIEW: 'teams.view',     // Для страницы настроек
-  TEAMS_CREATE: 'teams.create',
-  TEAMS_UPDATE: 'teams.update',
-  TEAMS_DELETE: 'teams.delete',
+  TEAMS_LIST: 'teams.list',
+  TEAMS_VIEW: 'teams.view',
+  TEAMS_MANAGE: 'teams.manage',
 
   // Groups
-  GROUPS_LIST: 'groups.list',   // Для API (select, фильтры)
-  GROUPS_VIEW: 'groups.view',   // Для страницы настроек
-  GROUPS_CREATE: 'groups.create',
-  GROUPS_UPDATE: 'groups.update',
-  GROUPS_DELETE: 'groups.delete',
+  GROUPS_LIST: 'groups.list',
+  GROUPS_VIEW: 'groups.view',
+  GROUPS_MANAGE: 'groups.manage',
 
   // Roles
-  ROLES_LIST: 'roles.list',     // Для API (select, фильтры)
-  ROLES_VIEW: 'roles.view',     // Для страницы настроек
-  ROLES_CREATE: 'roles.create',
-  ROLES_UPDATE: 'roles.update',
-  ROLES_DELETE: 'roles.delete',
+  ROLES_LIST: 'roles.list',
+  ROLES_VIEW: 'roles.view',
+  ROLES_MANAGE: 'roles.manage',
 
   // Schedule
   SCHEDULE_VIEW: 'schedule.view',
-  SCHEDULE_CREATE: 'schedule.create',
+  SCHEDULE_MANAGE: 'schedule.manage',
 
   // Shift Requests
   SHIFT_REQUESTS_VIEW: 'shift-requests.view',
-  SHIFT_REQUESTS_CREATE: 'shift-requests.create',
-  SHIFT_REQUESTS_UPDATE: 'shift-requests.update',
-  SHIFT_REQUESTS_DELETE: 'shift-requests.delete',
-  SHIFT_REQUESTS_APPROVE: 'shift-requests.approve',
-  SHIFT_REQUESTS_REJECT: 'shift-requests.reject',
-  SHIFT_REQUESTS_CREATE_DIRECT: 'shift-requests.create-direct',
+  SHIFT_REQUESTS_MANAGE: 'shift-requests.manage',
 
   // Extra Shifts
   EXTRA_SHIFTS_VIEW: 'extra-shifts.view',
-  EXTRA_SHIFTS_CREATE: 'extra-shifts.create',
-  EXTRA_SHIFTS_APPROVE: 'extra-shifts.approve',
-  EXTRA_SHIFTS_REJECT: 'extra-shifts.reject',
+  EXTRA_SHIFTS_MANAGE: 'extra-shifts.manage',
 
   // Penalties
   PENALTIES_VIEW: 'penalties.view',
-  PENALTIES_CREATE: 'penalties.create',
-  PENALTIES_UPDATE: 'penalties.update',
-  PENALTIES_APPROVE: 'penalties.approve',
-  PENALTIES_REJECT: 'penalties.reject',
+  PENALTIES_MANAGE: 'penalties.manage',
 
   // Quality
   QUALITY_VIEW: 'quality.view',
+  QUALITY_MANAGE: 'quality.manage',
 
   // Quality Maps
   QUALITY_MAPS_VIEW: 'quality-maps.view',
-  QUALITY_MAPS_CREATE: 'quality-maps.create',
-  QUALITY_MAPS_UPDATE: 'quality-maps.update',
-  QUALITY_MAPS_DELETE: 'quality-maps.delete',
+  QUALITY_MAPS_MANAGE: 'quality-maps.manage',
 
   // Quality Criteria
-  QUALITY_CRITERIA_LIST: 'quality-criteria.list',   // Для API (формы создания карт)
-  QUALITY_CRITERIA_VIEW: 'quality-criteria.view',   // Для страницы настроек
-  QUALITY_CRITERIA_CREATE: 'quality-criteria.create',
-  QUALITY_CRITERIA_UPDATE: 'quality-criteria.update',
-  QUALITY_CRITERIA_DELETE: 'quality-criteria.delete',
+  QUALITY_CRITERIA_LIST: 'quality-criteria.list',
+  QUALITY_CRITERIA_VIEW: 'quality-criteria.view',
+  QUALITY_CRITERIA_MANAGE: 'quality-criteria.manage',
 
   // Quality Criteria Categories
+  QUALITY_CRITERIA_CATEGORIES_LIST: 'quality-criteria-categories.list',
   QUALITY_CRITERIA_CATEGORIES_VIEW: 'quality-criteria-categories.view',
-  QUALITY_CRITERIA_CATEGORIES_CREATE: 'quality-criteria-categories.create',
-  QUALITY_CRITERIA_CATEGORIES_UPDATE: 'quality-criteria-categories.update',
-  QUALITY_CRITERIA_CATEGORIES_DELETE: 'quality-criteria-categories.delete',
+  QUALITY_CRITERIA_CATEGORIES_MANAGE: 'quality-criteria-categories.manage',
 
   // Quality Deductions
   QUALITY_DEDUCTIONS_VIEW: 'quality-deductions.view',
-  QUALITY_DEDUCTIONS_CREATE: 'quality-deductions.create',
-  QUALITY_CALL_DEDUCTIONS_CREATE: 'quality-call-deductions.create',
+  QUALITY_DEDUCTIONS_MANAGE: 'quality-deductions.manage',
 
   // Quality Reviews
   QUALITY_REVIEWS_VIEW: 'quality-reviews.view',
-  QUALITY_REVIEWS_CREATE: 'quality-reviews.create',
-  QUALITY_REVIEWS_UPDATE: 'quality-reviews.update',
+  QUALITY_REVIEWS_MANAGE: 'quality-reviews.manage',
+
+  // Reports / Stats
+  TEAM_STATS_VIEW: 'team-stats.view',
+  TEAM_STATS_MANAGE: 'team-stats.manage',
+  GROUP_STATS_VIEW: 'group-stats.view',
+  GROUP_STATS_MANAGE: 'group-stats.manage',
+  USER_STATS_VIEW: 'user-stats.view',
+  USER_STATS_MANAGE: 'user-stats.manage',
 
   // System
   PERMISSIONS_VIEW: 'permissions.view',
+  PERMISSIONS_MANAGE: 'permissions.manage',
   SCHEDULE_TYPES_VIEW: 'schedule-types.view',
-  SYSTEM_ADMIN: 'system.admin',
-  SYSTEM_SETTINGS: 'system.settings',
-  SYSTEM_BACKUP: 'system.backup',
+  SCHEDULE_TYPES_MANAGE: 'schedule-types.manage',
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -114,72 +94,59 @@ export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
 export const PERMISSION_GROUPS = {
   USERS: [
     PERMISSIONS.USERS_VIEW,
-    PERMISSIONS.USERS_CREATE,
-    PERMISSIONS.USERS_UPDATE,
-    PERMISSIONS.USERS_DELETE,
-    PERMISSIONS.USERS_DEACTIVATE,
-    PERMISSIONS.USERS_ACTIVATE,
-    PERMISSIONS.USERS_TRANSFER,
+    PERMISSIONS.USERS_VIEW_OWN,
+    PERMISSIONS.USERS_MANAGE,
   ],
   TEAMS: [
     PERMISSIONS.TEAMS_VIEW,
-    PERMISSIONS.TEAMS_CREATE,
-    PERMISSIONS.TEAMS_UPDATE,
-    PERMISSIONS.TEAMS_DELETE,
+    PERMISSIONS.TEAMS_MANAGE,
   ],
   GROUPS: [
     PERMISSIONS.GROUPS_VIEW,
-    PERMISSIONS.GROUPS_CREATE,
-    PERMISSIONS.GROUPS_UPDATE,
-    PERMISSIONS.GROUPS_DELETE,
+    PERMISSIONS.GROUPS_MANAGE,
   ],
   ROLES: [
     PERMISSIONS.ROLES_VIEW,
-    PERMISSIONS.ROLES_CREATE,
-    PERMISSIONS.ROLES_UPDATE,
-    PERMISSIONS.ROLES_DELETE,
+    PERMISSIONS.ROLES_MANAGE,
   ],
   SCHEDULE: [
     PERMISSIONS.SCHEDULE_VIEW,
-    PERMISSIONS.SCHEDULE_CREATE,
+    PERMISSIONS.SCHEDULE_MANAGE,
     PERMISSIONS.SHIFT_REQUESTS_VIEW,
-    PERMISSIONS.SHIFT_REQUESTS_CREATE,
-    PERMISSIONS.SHIFT_REQUESTS_UPDATE,
-    PERMISSIONS.SHIFT_REQUESTS_DELETE,
-    PERMISSIONS.SHIFT_REQUESTS_APPROVE,
-    PERMISSIONS.SHIFT_REQUESTS_REJECT,
-    PERMISSIONS.SHIFT_REQUESTS_CREATE_DIRECT,
+    PERMISSIONS.SHIFT_REQUESTS_MANAGE,
   ],
   PENALTIES: [
     PERMISSIONS.PENALTIES_VIEW,
-    PERMISSIONS.PENALTIES_CREATE,
-    PERMISSIONS.PENALTIES_UPDATE,
-    PERMISSIONS.PENALTIES_APPROVE,
-    PERMISSIONS.PENALTIES_REJECT,
+    PERMISSIONS.PENALTIES_MANAGE,
   ],
   QUALITY: [
     PERMISSIONS.QUALITY_VIEW,
+    PERMISSIONS.QUALITY_MANAGE,
     PERMISSIONS.QUALITY_MAPS_VIEW,
-    PERMISSIONS.QUALITY_MAPS_CREATE,
-    PERMISSIONS.QUALITY_MAPS_UPDATE,
-    PERMISSIONS.QUALITY_MAPS_DELETE,
+    PERMISSIONS.QUALITY_MAPS_MANAGE,
     PERMISSIONS.QUALITY_CRITERIA_VIEW,
-    PERMISSIONS.QUALITY_CRITERIA_CREATE,
-    PERMISSIONS.QUALITY_CRITERIA_UPDATE,
-    PERMISSIONS.QUALITY_CRITERIA_DELETE,
+    PERMISSIONS.QUALITY_CRITERIA_MANAGE,
+    PERMISSIONS.QUALITY_CRITERIA_CATEGORIES_VIEW,
+    PERMISSIONS.QUALITY_CRITERIA_CATEGORIES_MANAGE,
     PERMISSIONS.QUALITY_DEDUCTIONS_VIEW,
-    PERMISSIONS.QUALITY_DEDUCTIONS_CREATE,
-    PERMISSIONS.QUALITY_CALL_DEDUCTIONS_CREATE,
+    PERMISSIONS.QUALITY_DEDUCTIONS_MANAGE,
+    PERMISSIONS.QUALITY_REVIEWS_VIEW,
+    PERMISSIONS.QUALITY_REVIEWS_MANAGE,
+  ],
+  REPORTS: [
+    PERMISSIONS.TEAM_STATS_VIEW,
+    PERMISSIONS.TEAM_STATS_MANAGE,
+    PERMISSIONS.GROUP_STATS_VIEW,
+    PERMISSIONS.GROUP_STATS_MANAGE,
+    PERMISSIONS.USER_STATS_VIEW,
+    PERMISSIONS.USER_STATS_MANAGE,
   ],
   SETTINGS: [
     PERMISSIONS.TEAMS_VIEW,
-    PERMISSIONS.TEAMS_CREATE,
     PERMISSIONS.GROUPS_VIEW,
-    PERMISSIONS.GROUPS_CREATE,
     PERMISSIONS.ROLES_VIEW,
-    PERMISSIONS.ROLES_CREATE,
     PERMISSIONS.QUALITY_CRITERIA_VIEW,
-    PERMISSIONS.QUALITY_CRITERIA_CREATE,
+    PERMISSIONS.SCHEDULE_TYPES_VIEW,
   ],
 } as const;
 
@@ -199,5 +166,9 @@ export const NAV_PERMISSIONS = {
   SETTINGS_GROUPS: PERMISSIONS.GROUPS_VIEW,
   SETTINGS_ROLES: PERMISSIONS.ROLES_VIEW,
   SETTINGS_CRITERIA: PERMISSIONS.QUALITY_CRITERIA_VIEW,
+  TEAM_STATS: PERMISSIONS.TEAM_STATS_VIEW,
+  GROUP_STATS: PERMISSIONS.GROUP_STATS_VIEW,
+  USER_STATS: PERMISSIONS.USER_STATS_VIEW,
+  PERMISSIONS: PERMISSIONS.PERMISSIONS_VIEW,
 } as const;
 

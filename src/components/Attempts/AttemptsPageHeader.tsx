@@ -1,25 +1,16 @@
 import React from 'react';
-import { Button, Space, Typography } from 'antd';
+import { Typography } from 'antd';
 import {
-  TeamOutlined,
-  ReloadOutlined
+  TeamOutlined
 } from '@ant-design/icons';
 import { theme } from 'antd';
 import styles from '../../styles/users/users-page.module.css';
 
 const { Title, Text } = Typography;
 
-interface AttemptsPageHeaderProps {
-  onResetFilters: () => void;
-  onRefetch?: () => void;
-  hasActiveFilters: boolean;
-}
+interface AttemptsPageHeaderProps {}
 
-const AttemptsPageHeader: React.FC<AttemptsPageHeaderProps> = ({
-  onResetFilters,
-  onRefetch,
-  hasActiveFilters
-}) => {
+const AttemptsPageHeader: React.FC<AttemptsPageHeaderProps> = () => {
   const { token } = theme.useToken();
 
   return (
@@ -38,26 +29,6 @@ const AttemptsPageHeader: React.FC<AttemptsPageHeaderProps> = ({
             Управление заявками новых пользователей
           </Text>
         </div>
-        
-        <Space size="middle" wrap>
-          <Button 
-            icon={<ReloadOutlined />} 
-            onClick={onResetFilters}
-            disabled={!hasActiveFilters}
-            size="middle"
-          >
-            Сбросить
-          </Button>
-          {onRefetch && (
-            <Button 
-              icon={<ReloadOutlined />}
-              onClick={onRefetch}
-              size="middle"
-            >
-              Обновить
-            </Button>
-          )}
-        </Space>
       </div>
     </div>
   );

@@ -5,16 +5,20 @@ import { QualityMapHeader, QualityMapInfo } from '../../components/EditQualityMa
 import QualityTable from '../../components/QualityTable/QualityTable';
 import QualityCallsTable from '../../components/QualityTable/QualityCallsTable';
 import { useGetQualityMapQuery } from '../../api/qualityApi';
+import { usePermissions } from '../../hooks/usePermissions';
+import { PERMISSIONS } from '../../constants/permissions';
 import styles from '../../styles/users/users-page.module.css';
 
 const QualityMapDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
   const qualityMapId = parseInt(id || '0');
 
   const { data: qualityMap, isLoading, error } = useGetQualityMapQuery(qualityMapId, {
     skip: !qualityMapId,
   });
+  const canEdit = hasPermission(PERMISSIONS.QUALITY_MAPS_MANAGE);
 
   const handleBack = () => {
     navigate('/quality');
@@ -68,6 +72,7 @@ const QualityMapDetailPage: React.FC = () => {
         mode="view"
         onBack={handleBack}
         onToggleMode={handleToggleMode}
+        canEdit={canEdit}
       />
 
       {/* Информация о карте */}

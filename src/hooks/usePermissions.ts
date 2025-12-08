@@ -1,7 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useTypedSelector } from './store';
 import type { Permission } from '../constants/permissions';
-import { PERMISSIONS } from '../constants/permissions';
 
 /**
  * Хук для работы с permissions пользователя
@@ -37,19 +36,11 @@ export const usePermissions = () => {
 
   /**
    * Проверить, является ли пользователь Super Admin
-   * Проверяем по permission system.admin или по названию роли 'Super Admin'
+   * Проверяем по названию роли 'Super Admin'
    */
   const isSuperAdmin = useMemo((): boolean => {
-    // Проверяем по permission
-    if (userPermissions.includes(PERMISSIONS.SYSTEM_ADMIN)) {
-      return true;
-    }
-    // Проверяем по роли
-    if (user?.roles?.some(role => role.name === 'Super Admin')) {
-      return true;
-    }
-    return false;
-  }, [userPermissions, user?.roles]);
+    return user?.roles?.some(role => role.name === 'Super Admin') ?? false;
+  }, [user?.roles]);
 
   /**
    * Проверить наличие конкретного permission

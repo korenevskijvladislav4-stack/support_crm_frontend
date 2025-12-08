@@ -17,7 +17,6 @@ import {
 import {
   SearchOutlined,
   ReloadOutlined,
-  ClearOutlined,
   CheckOutlined,
   TeamOutlined,
   FieldTimeOutlined,
@@ -58,7 +57,7 @@ const filterParsers = {
 const QualityDeductionsPage: FC = () => {
   const { token } = theme.useToken();
 
-  const { filters: urlFilters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters({
+  const { filters: urlFilters, setFilters } = useUrlFilters({
     defaults: defaultFilters,
     parsers: filterParsers,
   });
@@ -87,11 +86,6 @@ const QualityDeductionsPage: FC = () => {
   const handleApplyFilters = useCallback(() => {
     setFilters({ ...localFilters, page: 1 });
   }, [localFilters, setFilters]);
-
-  const handleResetFilters = useCallback(() => {
-    setLocalFilters(defaultFilters);
-    resetUrlFilters();
-  }, [resetUrlFilters]);
 
   const handleTableChange = useCallback((pagination: { current: number; pageSize: number }) => {
     setFilters({ page: pagination.current, per_page: Math.min(pagination.pageSize, 100) });
@@ -127,9 +121,8 @@ const QualityDeductionsPage: FC = () => {
       title: 'Пользователь',
       key: 'user',
       width: 200,
-      align: 'center',
       render: (_, record) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
             width: 28,
             height: 28,
@@ -359,15 +352,6 @@ const QualityDeductionsPage: FC = () => {
             >
               Обновить
             </Button>
-            {hasActiveFilters && (
-              <Button 
-                icon={<ClearOutlined />} 
-                onClick={handleResetFilters} 
-                size="middle"
-              >
-                Сбросить
-              </Button>
-            )}
           </Space>
         </Flex>
       </Card>

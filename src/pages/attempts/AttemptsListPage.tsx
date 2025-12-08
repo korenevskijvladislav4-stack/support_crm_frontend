@@ -62,8 +62,8 @@ const AttemptsListPage: FC = () => {
   const { hasPermission } = usePermissions();
   
   // Permissions
-  const canApprove = hasPermission(PERMISSIONS.ATTEMPTS_APPROVE);
-  const canDelete = hasPermission(PERMISSIONS.ATTEMPTS_DELETE);
+  const canApprove = hasPermission(PERMISSIONS.ATTEMPTS_MANAGE);
+  const canDelete = hasPermission(PERMISSIONS.ATTEMPTS_MANAGE);
 
   // Фильтры с сохранением в URL
   const { filters: urlFilters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters({
@@ -129,11 +129,10 @@ const AttemptsListPage: FC = () => {
   const columns: TableColumnsType<IAttempt> = useMemo(() => [
     {
       title: 'Кандидат',
-      align: 'center',
       width: 200,
       fixed: 'left',
       render: (_, record: IAttempt) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
             width: 32,
             height: 32,
@@ -332,11 +331,7 @@ const AttemptsListPage: FC = () => {
 
   return (
     <div className={styles.pageContainer}>
-      <AttemptsPageHeader
-        onResetFilters={handleResetFilters}
-        onRefetch={() => trigger(filtersWithStatus)}
-        hasActiveFilters={hasActiveFilters}
-      />
+      <AttemptsPageHeader />
 
       <AttemptsFilters
         filters={filters}

@@ -122,6 +122,7 @@ export interface IUserStats {
     count: number;
     hours: number;
   };
+  worked_hours: number;
 }
 
 export interface IUserStatsFilters extends IBaseFilter {

@@ -17,13 +17,15 @@ interface QualityMapHeaderProps {
   mode: 'edit' | 'view';
   onBack: () => void;
   onToggleMode: () => void;
+  canEdit?: boolean;
 }
 
 const QualityMapHeader: React.FC<QualityMapHeaderProps> = ({ 
   qualityMap, 
   mode,
   onBack, 
-  onToggleMode 
+  onToggleMode,
+  canEdit = true,
 }) => {
   const { token } = theme.useToken();
   const isEditMode = mode === 'edit';
@@ -61,14 +63,16 @@ const QualityMapHeader: React.FC<QualityMapHeaderProps> = ({
         </div>
         
         <Space size="middle" wrap>
-          <Button 
-            icon={isEditMode ? <EyeOutlined /> : <EditOutlined />}
-            type={isEditMode ? 'default' : 'primary'}
-            onClick={onToggleMode}
-            size="middle"
-          >
-            {isEditMode ? 'Просмотр' : 'Редактировать'}
-          </Button>
+          {canEdit && (
+            <Button 
+              icon={isEditMode ? <EyeOutlined /> : <EditOutlined />}
+              type={isEditMode ? 'default' : 'primary'}
+              onClick={onToggleMode}
+              size="middle"
+            >
+              {isEditMode ? 'Просмотр' : 'Редактировать'}
+            </Button>
+          )}
           <Button 
             icon={<ArrowLeftOutlined />} 
             onClick={onBack}

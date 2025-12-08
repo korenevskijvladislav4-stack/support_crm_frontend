@@ -22,3 +22,22 @@
 .layout{
     height: 100%;
 }
+
+.navScrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb, #bfbfbf) var(--scrollbar-track, #f5f5f5);
+}
+
+.navScrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.navScrollbar::-webkit-scrollbar-track {
+    background: var(--scrollbar-track, #f5f5f5);
+}
+
+.navScrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb, #bfbfbf);
+    border-radius: 4px;
+    border: 2px solid var(--scrollbar-track, #f5f5f5);
+}

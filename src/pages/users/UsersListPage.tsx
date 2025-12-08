@@ -67,9 +67,9 @@ const UsersListPage: FC = () => {
   const { hasPermission } = usePermissions();
   
   // Permissions
-  const canUpdate = hasPermission(PERMISSIONS.USERS_UPDATE);
-  const canDeactivate = hasPermission(PERMISSIONS.USERS_DEACTIVATE);
-  const canActivate = hasPermission(PERMISSIONS.USERS_ACTIVATE);
+  const canUpdate = hasPermission(PERMISSIONS.USERS_MANAGE);
+  const canDeactivate = hasPermission(PERMISSIONS.USERS_MANAGE);
+  const canActivate = hasPermission(PERMISSIONS.USERS_MANAGE);
   
   // Фильтры с сохранением в URL
   const { filters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters({
@@ -419,11 +419,7 @@ const UsersListPage: FC = () => {
 
   return (
     <div className={styles.pageContainer}>
-      <UsersPageHeader
-        onResetFilters={handleResetFilters}
-        onRefetch={() => trigger(filters)}
-        hasActiveFilters={hasActiveFilters}
-      />
+      <UsersPageHeader />
 
       <UsersFilters
         filters={userFiltersForm}

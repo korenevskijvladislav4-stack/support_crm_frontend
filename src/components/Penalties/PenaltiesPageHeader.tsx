@@ -2,7 +2,6 @@ import React from 'react';
 import { Button, Space, Typography } from 'antd';
 import {
   ExclamationCircleOutlined,
-  ReloadOutlined,
   PlusOutlined
 } from '@ant-design/icons';
 import { theme } from 'antd';
@@ -11,17 +10,11 @@ import styles from '../../styles/users/users-page.module.css';
 const { Title, Text } = Typography;
 
 interface PenaltiesPageHeaderProps {
-  onResetFilters: () => void;
-  onRefetch?: () => void;
-  hasActiveFilters: boolean;
   onCreateClick: () => void;
   canCreate?: boolean;
 }
 
 const PenaltiesPageHeader: React.FC<PenaltiesPageHeaderProps> = ({
-  onResetFilters,
-  onRefetch,
-  hasActiveFilters,
   onCreateClick,
   canCreate = false
 }) => {
@@ -45,23 +38,6 @@ const PenaltiesPageHeader: React.FC<PenaltiesPageHeaderProps> = ({
         </div>
         
         <Space size="middle" wrap>
-          <Button 
-            icon={<ReloadOutlined />} 
-            onClick={onResetFilters}
-            disabled={!hasActiveFilters}
-            size="middle"
-          >
-            Сбросить
-          </Button>
-          {onRefetch && (
-            <Button 
-              icon={<ReloadOutlined />}
-              onClick={onRefetch}
-              size="middle"
-            >
-              Обновить
-            </Button>
-          )}
           {canCreate && (
             <Button 
               type="primary" 

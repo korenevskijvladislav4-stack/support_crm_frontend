@@ -17,11 +17,11 @@ export const AttemptApprovePage = lazy(() => import('../pages/attempts/AttemptAp
 export const SchedulePage = lazy(() => import('../pages/schedule/SchedulePage'));
 export const CreateSchedulePage = lazy(() => import('../pages/schedule/CreateSchedulePage'));
 
-// Groups pages
-
-// Settings pages
+// Groups / Reports pages
 export const GroupsStatsPage = lazy(() => import('../pages/groups/GroupsStatsPage'));
 export const UsersStatsPage = lazy(() => import('../pages/users/UsersStatsPage'));
+export const TeamsStatsPage = lazy(() => import('../pages/teams/TeamsStatsPage'));
+// Settings pages
 export const SettingsGroupPage = lazy(() => import('../pages/settings/SettingsGroupPage'));
 export const SettingsTeamsPage = lazy(() => import('../pages/settings/SettingsTeamsPage'));
 export const SettingsRolesPage = lazy(() => import('../pages/settings/SettingsRolesPage'));

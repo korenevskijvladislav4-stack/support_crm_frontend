@@ -14,6 +14,7 @@ import {
   CreateSchedulePage,
   GroupsStatsPage,
   UsersStatsPage,
+  TeamsStatsPage,
   SettingsGroupPage,
   SettingsTeamsPage,
   SettingsRolesPage,
@@ -25,6 +26,8 @@ import {
   QualityDeductionsPage,
   PenaltiesPage,
 } from './lazyRoutes';
+import PermissionGuard from '../components/PermissionGuard';
+import { PERMISSIONS } from '../constants/permissions';
 
 interface PageLoaderProps {
   children: React.ReactNode;
@@ -77,33 +80,41 @@ export const AppRoutes: FC<AppRoutesProps> = ({
           <Route
             path="/users"
             element={
-              <PageLoader>
-                <UsersListPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.USERS_VIEW}>
+                <PageLoader>
+                  <UsersListPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/users/stats"
             element={
-              <PageLoader>
-                <UsersStatsPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.USER_STATS_VIEW}>
+                <PageLoader>
+                  <UsersStatsPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/users/:id"
             element={
-              <PageLoader>
-                <UserProfile />
-              </PageLoader>
+              <PermissionGuard anyOf={[PERMISSIONS.USERS_VIEW, PERMISSIONS.USERS_VIEW_OWN, PERMISSIONS.USERS_MANAGE]}>
+                <PageLoader>
+                  <UserProfile />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/users/:id/edit"
             element={
-              <PageLoader>
-                <EditUserPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.USERS_MANAGE}>
+                <PageLoader>
+                  <EditUserPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
 
@@ -111,17 +122,21 @@ export const AppRoutes: FC<AppRoutesProps> = ({
           <Route
             path="/attempts"
             element={
-              <PageLoader>
-                <AttemptsListPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.ATTEMPTS_VIEW}>
+                <PageLoader>
+                  <AttemptsListPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/attempts/:id"
             element={
-              <PageLoader>
-                <AttemptApprovePage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.ATTEMPTS_MANAGE}>
+                <PageLoader>
+                  <AttemptApprovePage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
 
@@ -129,17 +144,21 @@ export const AppRoutes: FC<AppRoutesProps> = ({
           <Route
             path="/schedule"
             element={
-              <PageLoader>
-                <SchedulePage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.SCHEDULE_VIEW}>
+                <PageLoader>
+                  <SchedulePage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/schedule/create"
             element={
-              <PageLoader>
-                <CreateSchedulePage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.SCHEDULE_MANAGE}>
+                <PageLoader>
+                  <CreateSchedulePage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
 
@@ -147,8 +166,18 @@ export const AppRoutes: FC<AppRoutesProps> = ({
           <Route
             path="/groups"
             element={
+              <PermissionGuard permission={PERMISSIONS.GROUP_STATS_VIEW}>
+                <PageLoader>
+                  <GroupsStatsPage />
+                </PageLoader>
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="/teams/stats"
+            element={
               <PageLoader>
-                <GroupsStatsPage />
+                <TeamsStatsPage />
               </PageLoader>
             }
           />
@@ -157,33 +186,41 @@ export const AppRoutes: FC<AppRoutesProps> = ({
           <Route
             path="/settings/groups"
             element={
-              <PageLoader>
-                <SettingsGroupPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.GROUPS_VIEW}>
+                <PageLoader>
+                  <SettingsGroupPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/settings/teams"
             element={
-              <PageLoader>
-                <SettingsTeamsPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.TEAMS_VIEW}>
+                <PageLoader>
+                  <SettingsTeamsPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/settings/roles"
             element={
-              <PageLoader>
-                <SettingsRolesPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.ROLES_VIEW}>
+                <PageLoader>
+                  <SettingsRolesPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/settings/quality_criterias"
             element={
-              <PageLoader>
-                <SettingsQualityCriteriasPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.QUALITY_CRITERIA_VIEW}>
+                <PageLoader>
+                  <SettingsQualityCriteriasPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
 
@@ -191,41 +228,61 @@ export const AppRoutes: FC<AppRoutesProps> = ({
           <Route
             path="/quality"
             element={
-              <PageLoader>
-                <QualityMapsListPage />
-              </PageLoader>
+              <PermissionGuard anyOf={[
+                PERMISSIONS.QUALITY_MAPS_VIEW,
+                PERMISSIONS.QUALITY_MAPS_MANAGE,
+                PERMISSIONS.QUALITY_VIEW,
+                PERMISSIONS.QUALITY_MANAGE,
+              ]}>
+                <PageLoader>
+                  <QualityMapsListPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/quality/create"
             element={
-              <PageLoader>
-                <CreateQualityMapPage onSuccess={onQualitySuccess ?? (() => {})} />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.QUALITY_MAPS_MANAGE}>
+                <PageLoader>
+                  <CreateQualityMapPage onSuccess={onQualitySuccess ?? (() => {})} />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/quality/:id/edit"
             element={
-              <PageLoader>
-                <EditQualityMapPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.QUALITY_MAPS_MANAGE}>
+                <PageLoader>
+                  <EditQualityMapPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/quality/:id"
             element={
-              <PageLoader>
-                <QualityMapDetailPage />
-              </PageLoader>
+              <PermissionGuard anyOf={[
+                PERMISSIONS.QUALITY_MAPS_VIEW,
+                PERMISSIONS.QUALITY_MAPS_MANAGE,
+                PERMISSIONS.QUALITY_VIEW,
+                PERMISSIONS.QUALITY_MANAGE,
+              ]}>
+                <PageLoader>
+                  <QualityMapDetailPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
           <Route
             path="/quality-deductions"
             element={
-              <PageLoader>
-                <QualityDeductionsPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.QUALITY_DEDUCTIONS_VIEW}>
+                <PageLoader>
+                  <QualityDeductionsPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
 
@@ -233,9 +290,11 @@ export const AppRoutes: FC<AppRoutesProps> = ({
           <Route
             path="/penalties"
             element={
-              <PageLoader>
-                <PenaltiesPage />
-              </PageLoader>
+              <PermissionGuard permission={PERMISSIONS.PENALTIES_VIEW}>
+                <PageLoader>
+                  <PenaltiesPage />
+                </PageLoader>
+              </PermissionGuard>
             }
           />
 

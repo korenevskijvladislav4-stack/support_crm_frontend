@@ -20,7 +20,6 @@ import {
   TeamOutlined,
   SearchOutlined,
   ReloadOutlined,
-  ClearOutlined,
   CheckOutlined,
   FileTextOutlined,
   WarningOutlined,
@@ -60,7 +59,7 @@ const filterParsers = {
 const UsersStatsPage: FC = () => {
   const { token } = theme.useToken();
 
-  const { filters: urlFilters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters<IUserStatsFilters>({
+  const { filters: urlFilters, setFilters } = useUrlFilters<IUserStatsFilters>({
     defaults: defaultFilters,
     parsers: filterParsers,
   });
@@ -89,11 +88,6 @@ const UsersStatsPage: FC = () => {
   const handleApplyFilters = useCallback(() => {
     setFilters({ ...localFilters, page: 1 });
   }, [localFilters, setFilters]);
-
-  const handleResetFilters = useCallback(() => {
-    setLocalFilters(defaultFilters);
-    resetUrlFilters();
-  }, [resetUrlFilters]);
 
   const handleDateChange = useCallback((dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => {
     setLocalFilters(prev => ({
@@ -266,6 +260,21 @@ const UsersStatsPage: FC = () => {
         </Link>
       ),
     },
+    {
+      title: 'Отработано (часы)',
+      key: 'worked_hours',
+      width: 140,
+      align: 'center',
+      render: (_, record) => (
+        <Tag 
+          icon={<FieldTimeOutlined />} 
+          color={record.worked_hours > 0 ? 'blue' : 'default'}
+          style={{ margin: 0, fontSize: 12 }}
+        >
+          {record.worked_hours ?? 0}
+        </Tag>
+      ),
+    },
   ], [token, getQualityLink, getPenaltiesLink]);
 
   return (
@@ -362,15 +371,6 @@ const UsersStatsPage: FC = () => {
             >
               Обновить
             </Button>
-            {hasActiveFilters && (
-              <Button 
-                icon={<ClearOutlined />} 
-                onClick={handleResetFilters} 
-                size="middle"
-              >
-                Сбросить
-              </Button>
-            )}
           </Space>
         </Flex>
       </Card>

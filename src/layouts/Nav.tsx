@@ -106,11 +106,19 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
       });
     }
 
-    // Отчеты (группы / статистика пользователей)
-    if (hasAnyPermission([PERMISSIONS.GROUPS_VIEW, PERMISSIONS.USERS_VIEW])) {
+    // Отчеты (команды / группы / пользователи)
+    if (hasAnyPermission([PERMISSIONS.TEAM_STATS_VIEW, PERMISSIONS.GROUP_STATS_VIEW, PERMISSIONS.USER_STATS_VIEW])) {
       const reportChildren: MenuProps['items'] = [];
 
-      if (hasPermission(PERMISSIONS.GROUPS_VIEW)) {
+      if (hasPermission(PERMISSIONS.TEAM_STATS_VIEW)) {
+        reportChildren.push({
+          key: '/teams/stats',
+          icon: <TeamOutlined style={{ fontSize: '14px' }} />,
+          label: <Link to="/teams/stats">Команды</Link>,
+        });
+      }
+
+      if (hasPermission(PERMISSIONS.GROUP_STATS_VIEW)) {
         reportChildren.push({
           key: '/groups',
           icon: <TeamOutlined style={{ fontSize: '14px' }} />,
@@ -118,11 +126,11 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
         });
       }
 
-      if (hasPermission(PERMISSIONS.USERS_VIEW)) {
+      if (hasPermission(PERMISSIONS.USER_STATS_VIEW)) {
         reportChildren.push({
           key: '/users/stats',
           icon: <BarChartOutlined style={{ fontSize: '14px' }} />,
-          label: <Link to="/users/stats">Статистика пользователей</Link>,
+          label: <Link to="/users/stats">Пользователи</Link>,
         });
       }
 
@@ -203,52 +211,53 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
   const bottomMenuItems: MenuProps['items'] = [
     {
       key: 'user-info',
-      label: (
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '12px',
-          padding: '12px 16px',
-          borderBottom: isDarkMode ? '1px solid #303030' : '1px solid #f0f0f0'
-        }}>
-          <Avatar 
-            size="small" 
-            style={{ 
-              backgroundColor: '#1890ff',
-              flexShrink: 0
-            }}
-          >
-            {currentUser?.name?.[0]}{currentUser?.surname?.[0]}
-          </Avatar>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <Text 
-              strong 
+      label: currentUser?.id ? (
+        <Link to={`/users/${currentUser.id}`} style={{ color: 'inherit' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px',
+            padding: '12px 16px',
+            borderBottom: isDarkMode ? '1px solid #303030' : '1px solid #f0f0f0'
+          }}>
+            <Avatar 
+              size="small" 
               style={{ 
-                fontSize: '12px',
-                color: isDarkMode ? '#fff' : '#000',
-                display: 'block',
-                lineHeight: '1.2'
+                backgroundColor: '#1890ff',
+                flexShrink: 0
               }}
             >
-              {currentUser?.name} {currentUser?.surname}
-            </Text>
-            <Text 
-              type="secondary" 
-              style={{ 
-                fontSize: '10px',
-                display: 'block',
-                lineHeight: '1.2'
-              }}
-            >
-              {currentUser?.roles?.[0]?.name || 'Пользователь'}
-            </Text>
+              {currentUser?.name?.[0]}{currentUser?.surname?.[0]}
+            </Avatar>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Text 
+                strong 
+                style={{ 
+                  fontSize: '12px',
+                  color: isDarkMode ? '#fff' : '#000',
+                  display: 'block',
+                  lineHeight: '1.2'
+                }}
+              >
+                {currentUser?.name} {currentUser?.surname}
+              </Text>
+              <Text 
+                type="secondary" 
+                style={{ 
+                  fontSize: '10px',
+                  display: 'block',
+                  lineHeight: '1.2'
+                }}
+              >
+                {currentUser?.roles?.[0]?.name || 'Пользователь'}
+              </Text>
+            </div>
           </div>
-        </div>
-      ),
+        </Link>
+      ) : null,
       style: { 
         height: 'auto', 
         padding: 0,
-        cursor: 'default'
       },
     },
     {
@@ -314,6 +323,7 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
   return (
     <Layout hasSider style={{ height: '100vh', width: '100%' }}>
       <Sider 
+        className={styles.navScrollbar}
         width={260}
         breakpoint="lg"
         collapsedWidth={0}
@@ -321,7 +331,13 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
           height: '100vh',
           background: isDarkMode ? '#141414' : '#fff',
           borderRight: isDarkMode ? '1px solid #303030' : '1px solid #f0f0f0',
-          boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
+          boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          ['--scrollbar-thumb' as any]: isDarkMode ? '#434343' : '#bfbfbf',
+          ['--scrollbar-track' as any]: isDarkMode ? '#1f1f1f' : '#f5f5f5',
         }} 
         theme={isDarkMode ? 'dark' : 'light'}
       >
@@ -377,7 +393,7 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
         </div>
 
         {/* Основное меню */}
-        <div style={{ padding: '16px 0', flex: 1 }}>
+        <div style={{ padding: '16px 0', flex: 1, overflowY: 'auto', minHeight: 0 }}>
           <Menu 
             theme={isDarkMode ? 'dark' : 'light'} 
             mode="inline" 

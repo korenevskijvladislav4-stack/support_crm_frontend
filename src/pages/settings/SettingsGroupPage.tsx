@@ -97,9 +97,9 @@ const SettingsGroupPage: FC = () => {
   }, [filters.search, filters.team_id, filters.shift_type]);
 
   // Permissions
-  const canCreate = hasPermission(PERMISSIONS.GROUPS_CREATE);
-  const canUpdate = hasPermission(PERMISSIONS.GROUPS_UPDATE);
-  const canDelete = hasPermission(PERMISSIONS.GROUPS_DELETE);
+  const canCreate = hasPermission(PERMISSIONS.GROUPS_MANAGE);
+  const canUpdate = hasPermission(PERMISSIONS.GROUPS_MANAGE);
+  const canDelete = hasPermission(PERMISSIONS.GROUPS_MANAGE);
 
   // API запросы с серверной фильтрацией
   const [trigger, { data: groupsResponse, isLoading, isFetching }] = useLazyGetGroupsQuery();

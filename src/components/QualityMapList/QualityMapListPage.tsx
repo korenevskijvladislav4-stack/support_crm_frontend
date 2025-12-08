@@ -78,10 +78,11 @@ const QualityMapsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   
-  // Permissions
-  const canCreate = hasPermission(PERMISSIONS.QUALITY_MAPS_CREATE);
-  const canUpdate = hasPermission(PERMISSIONS.QUALITY_MAPS_UPDATE);
-  const canDelete = hasPermission(PERMISSIONS.QUALITY_MAPS_DELETE);
+  // Permissions (view/manage scheme)
+  const canManage = hasPermission(PERMISSIONS.QUALITY_MAPS_MANAGE);
+  const canCreate = canManage;
+  const canUpdate = canManage;
+  const canDelete = canManage;
 
   // Фильтры с сохранением в URL
   const { filters: urlFilters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters({
@@ -238,13 +239,12 @@ const QualityMapsListPage: React.FC = () => {
       title: 'Сотрудник',
       dataIndex: 'user',
       key: 'user',
-      align: 'center',
       fixed: 'left',
       width: 200,
       render: (_: unknown, record: IQualityMapListItem) => {
         const fullName = `${record.user.name}${record.user.surname ? ` ${record.user.surname}` : ''}`;
         return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
             width: 32,
             height: 32,
@@ -434,9 +434,6 @@ const QualityMapsListPage: React.FC = () => {
   return (
     <div className={styles.pageContainer}>
       <QualityMapPageHeader
-        onResetFilters={handleResetFilters}
-        onRefetch={refetch}
-        hasActiveFilters={hasActiveFilters}
         canCreate={canCreate}
       />
 

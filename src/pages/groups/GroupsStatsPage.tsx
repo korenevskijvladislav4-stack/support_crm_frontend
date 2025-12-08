@@ -21,7 +21,6 @@ import {
   UserOutlined,
   SearchOutlined,
   ReloadOutlined,
-  ClearOutlined,
   CheckOutlined,
   SunOutlined,
   MoonOutlined,
@@ -71,7 +70,7 @@ const GroupsStatsPage: FC = () => {
   const { token } = theme.useToken();
 
   // Фильтры с сохранением в URL
-  const { filters: urlFilters, setFilters, resetFilters: resetUrlFilters } = useUrlFilters<IGroupStatsFilters>({
+  const { filters: urlFilters, setFilters } = useUrlFilters<IGroupStatsFilters>({
     defaults: defaultFilters,
     parsers: filterParsers,
   });
@@ -110,11 +109,6 @@ const GroupsStatsPage: FC = () => {
   const handleApplyFilters = useCallback(() => {
     setFilters({ ...localFilters, page: 1 });
   }, [localFilters, setFilters]);
-
-  const handleResetFilters = useCallback(() => {
-    setLocalFilters(defaultFilters);
-    resetUrlFilters();
-  }, [resetUrlFilters]);
 
   const handleTableChange = useCallback((pagination: { current: number; pageSize: number }) => {
     setFilters({ page: pagination.current, per_page: pagination.pageSize });
@@ -275,11 +269,11 @@ const GroupsStatsPage: FC = () => {
       render: (_, record) => (
         <Space size={4}>
           <Tag 
-            icon={record.shift?.type === 'Дневная' ? <SunOutlined /> : <MoonOutlined />}
-            color={record.shift?.type === 'Дневная' ? 'orange' : 'purple'}
+            icon={record.shift?.type === 'День' ? <SunOutlined /> : <MoonOutlined />}
+            color={record.shift?.type === 'День' ? 'orange' : 'purple'}
             style={{ margin: 0, fontSize: 11 }}
           >
-            {record.shift?.type === 'Дневная' ? 'День' : 'Ночь'}
+            {record.shift?.type === 'День' ? 'День' : 'Ночь'}
           </Tag>
           <Tag 
             icon={record.shift?.number === 'Верхняя' ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
@@ -453,8 +447,8 @@ const GroupsStatsPage: FC = () => {
               value={localFilters.shift_type}
               onChange={(value) => setLocalFilters(prev => ({ ...prev, shift_type: value }))}
               options={[
-                { value: 'Дневная', label: 'День' },
-                { value: 'Ночная', label: 'Ночь' },
+                { value: 'День', label: 'День' },
+                { value: 'Ночь', label: 'Ночь' },
               ]}
             />
             <Select
@@ -510,15 +504,6 @@ const GroupsStatsPage: FC = () => {
             >
               Обновить
             </Button>
-            {hasActiveFilters && (
-              <Button 
-                icon={<ClearOutlined />} 
-                onClick={handleResetFilters} 
-                size="middle"
-              >
-                Сбросить
-              </Button>
-            )}
           </Space>
         </Flex>
       </Card>

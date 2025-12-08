@@ -79,9 +79,9 @@ const SettingsTeamsPage: FC = () => {
   }, [filters.search]);
 
   // Permissions
-  const canCreate = hasPermission(PERMISSIONS.TEAMS_CREATE);
-  const canUpdate = hasPermission(PERMISSIONS.TEAMS_UPDATE);
-  const canDelete = hasPermission(PERMISSIONS.TEAMS_DELETE);
+  const canCreate = hasPermission(PERMISSIONS.TEAMS_MANAGE);
+  const canUpdate = hasPermission(PERMISSIONS.TEAMS_MANAGE);
+  const canDelete = hasPermission(PERMISSIONS.TEAMS_MANAGE);
 
   // API запросы с серверной фильтрацией
   const [trigger, { data: teamsResponse, isLoading, isFetching }] = useLazyGetTeamsQuery();
