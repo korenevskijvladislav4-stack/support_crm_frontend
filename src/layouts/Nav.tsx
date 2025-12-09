@@ -79,6 +79,15 @@ const Nav: React.FC<NavProps> = ({ children, onToggleTheme, isDarkMode }) => {
       });
     }
 
+    // Запросы смен
+    if (hasAnyPermission([PERMISSIONS.SHIFT_REQUESTS_MANAGE, PERMISSIONS.SCHEDULE_MANAGE])) {
+      items.push({
+        key: '/shift-requests',
+        icon: <FieldTimeOutlined style={{ fontSize: '16px' }} />,
+        label: <Link to="/shift-requests">Запросы смен</Link>,
+      });
+    }
+
     // Качество
     if (hasAnyPermission([PERMISSIONS.QUALITY_VIEW, PERMISSIONS.QUALITY_MAPS_VIEW])) {
       items.push({

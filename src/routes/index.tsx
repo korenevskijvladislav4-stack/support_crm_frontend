@@ -19,6 +19,7 @@ import {
   SettingsTeamsPage,
   SettingsRolesPage,
   SettingsQualityCriteriasPage,
+  ShiftRequestsPage,
   QualityMapsListPage,
   CreateQualityMapPage,
   EditQualityMapPage,
@@ -297,6 +298,16 @@ export const AppRoutes: FC<AppRoutesProps> = ({
               </PermissionGuard>
             }
           />
+      <Route
+        path="/shift-requests"
+        element={
+          <PermissionGuard anyOf={[PERMISSIONS.SHIFT_REQUESTS_MANAGE, PERMISSIONS.SCHEDULE_MANAGE]}>
+            <PageLoader>
+              <ShiftRequestsPage />
+            </PageLoader>
+          </PermissionGuard>
+        }
+      />
 
           {/* Default redirect */}
           <Route path="*" element={<Navigate to="/users" replace />} />

@@ -26,6 +26,8 @@ export interface IShiftRequest {
   duration: number;
   status: ApprovalStatus;
   is_active: boolean;
+  is_viewed?: boolean;
+  role_peer_count?: number | null;
   shift?: {
     id: number;
     date: string;
@@ -33,6 +35,7 @@ export interface IShiftRequest {
   user?: {
     id: number;
     fullname: string;
+    team_id?: number | null;
   };
 }
 

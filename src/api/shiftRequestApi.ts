@@ -5,17 +5,30 @@ import type {
   ICreateShiftRequest,
   ICreateDirectShiftRequest
 } from '../types/shift.types';
+import type { IShiftRequestListResponse } from '../types/shiftRequest.types';
 
 export const shiftRequestApi = createApi({
     reducerPath: 'shiftRequestApi',
     tagTypes: ['ShiftRequest', 'Schedule'],
     baseQuery: baseQueryWithReauth,
     endpoints: (builder) => ({
-        getShiftRequests: builder.query<IShiftRequest[], void>({
-            query: () => ({
+        getShiftRequests: builder.query<IShiftRequestListResponse, {
+            is_viewed?: boolean;
+            status?: 'pending' | 'approved' | 'rejected';
+            page?: number;
+            per_page?: number;
+            full_name?: string;
+            team_id?: number | null;
+            group_id?: number | null;
+            date_from?: string | null;
+            date_to?: string | null;
+        } | undefined>({
+            query: (params) => ({
                 url: '/shift-requests',
+                params,
             }),
             providesTags: ['ShiftRequest'],
+            transformResponse: (response: any) => response,
         }),
         createShiftRequest: builder.mutation<IShiftRequest, ICreateShiftRequest>({
             query: (body) => ({

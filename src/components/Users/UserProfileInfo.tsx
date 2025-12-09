@@ -12,6 +12,8 @@ import {
 import type { IUser, IUserProfileFull } from '../../types/user.types';
 import { theme } from 'antd';
 import styles from '../../styles/users/user-profile.module.css';
+import dayjs from 'dayjs';
+import 'dayjs/locale/ru';
 
 const { Title, Text } = Typography;
 
@@ -32,6 +34,9 @@ const UserProfileInfo: React.FC<UserProfileInfoProps> = ({ user }) => {
   const scheduleTypeLabel = typeof (user as IUser)?.schedule_type === 'string'
     ? (user as IUser)?.schedule_type
     : (user as IUserProfileFull)?.schedule_type?.name;
+  const createdAtFormatted = user?.created_at
+    ? dayjs(user.created_at).locale('ru').format('DD.MM.YYYY HH:mm')
+    : null;
 
   const items = [
     {
@@ -158,7 +163,7 @@ const UserProfileInfo: React.FC<UserProfileInfoProps> = ({ user }) => {
           Дата регистрации
         </Text>
       ),
-      children: '15 марта 2023 года',
+      children: createdAtFormatted || <Text type="secondary">Не указана</Text>,
     },
   ];
 

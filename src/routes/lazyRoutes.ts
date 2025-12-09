@@ -16,6 +16,7 @@ export const AttemptApprovePage = lazy(() => import('../pages/attempts/AttemptAp
 // Schedule pages
 export const SchedulePage = lazy(() => import('../pages/schedule/SchedulePage'));
 export const CreateSchedulePage = lazy(() => import('../pages/schedule/CreateSchedulePage'));
+export const ShiftRequestsPage = lazy(() => import('../pages/shift-requests/ShiftRequestsPage'));
 
 // Groups / Reports pages
 export const GroupsStatsPage = lazy(() => import('../pages/groups/GroupsStatsPage'));

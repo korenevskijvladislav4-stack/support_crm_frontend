@@ -14,6 +14,7 @@ import {
   message,
   Space,
   Input,
+  Table,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -23,15 +24,21 @@ import {
   WarningOutlined,
   MessageOutlined,
   PlusCircleOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import { UserProfileHeader, UserProfileInfo } from "../../components/Users";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   useGetUserFullQuery,
   useDeactivateUserMutation,
+  useActivateUserMutation,
   useAddUserProfileCommentMutation,
 } from "../../api/usersApi";
+import { useGetQualityMapsQuery } from "../../api/qualityApi";
 import { skipToken } from "@reduxjs/toolkit/query";
+import type { TableColumnsType } from "antd";
+import type { IQualityMapListItem } from "../../types/quality.types";
+import { formatDate } from "../../utils/dateUtils";
 
 const { Text } = Typography;
 
@@ -43,8 +50,23 @@ const UserProfile: FC = () => {
 
   const { data: profile, isLoading, refetch } = useGetUserFullQuery(id ?? skipToken);
   const [deactivateUser, { isLoading: isDeactivating }] = useDeactivateUserMutation();
+  const [activateUser, { isLoading: isActivating }] = useActivateUserMutation();
   const [addComment, { isLoading: isAddingComment }] = useAddUserProfileCommentMutation();
   const [newComment, setNewComment] = useState("");
+  const [mapsPage, setMapsPage] = useState({ page: 1, per_page: 3 });
+
+  const {
+    data: qualityMapsResponse,
+    isFetching: isQualityMapsLoading,
+  } = useGetQualityMapsQuery(
+    userId
+      ? {
+          user_id: userId,
+          page: mapsPage.page,
+          per_page: mapsPage.per_page,
+        }
+      : skipToken
+  );
 
   const currentMonthLabel = useMemo(() => {
     const date = new Date();
@@ -53,12 +75,14 @@ const UserProfile: FC = () => {
   }, []);
 
   const user = profile;
+  const isDeactivated = user?.status === "deactivated";
   const deductions = useMemo(() => user?.deductions || [], [user]);
   const penalties = user?.penalties;
   const schedule = user?.schedule;
   const comments = user?.comments || [];
+  const qualityMaps = qualityMapsResponse?.data || [];
+  const qualityMeta = qualityMapsResponse?.meta;
   const penaltiesList = user?.penalties_list || [];
-  const qualityMaps = user?.quality_maps || [];
 
   const handleAddComment = useCallback(async () => {
     if (!userId || !newComment.trim()) return;
@@ -71,6 +95,148 @@ const UserProfile: FC = () => {
       message.error("Не удалось добавить комментарий");
     }
   }, [addComment, newComment, userId, refetch]);
+
+  const handleChangeStatus = useCallback(async () => {
+    if (!userId) return;
+    try {
+      if (isDeactivated) {
+        await activateUser(userId).unwrap();
+        message.success("Пользователь успешно активирован");
+      } else {
+        await deactivateUser(userId).unwrap();
+        message.success("Пользователь успешно деактивирован");
+      }
+      navigate("/users");
+    } catch {
+      message.error(isDeactivated ? "Ошибка при активации пользователя" : "Ошибка при деактивации пользователя");
+    }
+  }, [activateUser, deactivateUser, isDeactivated, navigate, userId]);
+
+  const getScoreColor = useCallback((score: number) => {
+    if (score >= 90) return "#52c41a";
+    if (score >= 80) return "#73d13d";
+    if (score >= 70) return "#95de64";
+    if (score >= 60) return "#bae637";
+    if (score >= 50) return "#ffec3d";
+    if (score >= 40) return "#ffc53d";
+    if (score >= 30) return "#ffa940";
+    if (score >= 20) return "#ff7a45";
+    if (score >= 10) return "#ff4d4f";
+    return "#cf1322";
+  }, []);
+
+  const qualityColumns: TableColumnsType<IQualityMapListItem> = useMemo(
+    () => [
+      {
+        title: "Период проверки",
+        key: "period",
+        align: "center",
+        width: 180,
+        render: (_: unknown, record) => (
+          <Text style={{ fontSize: 13 }}>
+            {formatDate(record.period.start)} - {formatDate(record.period.end)}
+          </Text>
+        ),
+      },
+      {
+        title: "Проверяющий",
+        dataIndex: "checker",
+        key: "checker",
+        align: "center",
+        width: 180,
+        render: (_: unknown, record) => {
+          const fullName = `${record.checker.name}${record.checker.surname ? ` ${record.checker.surname}` : ""}`;
+          return (
+            <Flex align="center" justify="center" gap={6}>
+              <FileTextOutlined style={{ color: token.colorPrimary }} />
+              <Text style={{ fontSize: 13 }}>{fullName}</Text>
+            </Flex>
+          );
+        },
+      },
+      {
+        title: "Статус",
+        key: "status",
+        align: "center",
+        width: 130,
+        render: (_: unknown, record) => (
+          <Tag
+            color={record.status === "active" ? "processing" : "success"}
+            style={{ fontSize: 12, margin: 0 }}
+          >
+            {record.status === "active" ? "Активна" : "Завершена"}
+          </Tag>
+        ),
+      },
+      {
+        title: "Проверено",
+        key: "checked",
+        align: "center",
+        width: 150,
+        render: (_: unknown, record) => (
+          <Space direction="vertical" size={2} style={{ margin: 0 }}>
+            <div>
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                Чаты:{" "}
+              </Text>
+              <Text strong style={{ fontSize: 12 }}>
+                {record.progress.chats.checked}/{record.progress.chats.total}
+              </Text>
+            </div>
+            {record.progress.calls.total > 0 && (
+              <div>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  Звонки:{" "}
+                </Text>
+                <Text strong style={{ fontSize: 12 }}>
+                  {record.progress.calls.checked}/{record.progress.calls.total}
+                </Text>
+              </div>
+            )}
+          </Space>
+        ),
+      },
+      {
+        title: "Оценка",
+        dataIndex: "score",
+        key: "score",
+        align: "center",
+        width: 90,
+        render: (score: number) => (
+          <Tag
+            color={getScoreColor(score)}
+            style={{
+              margin: 0,
+              fontSize: 11,
+              padding: "2px 8px",
+              borderRadius: 6,
+              border: `1px solid ${getScoreColor(score)}33`,
+              background: `${getScoreColor(score)}15`,
+            }}
+          >
+            {score ?? 0}%
+          </Tag>
+        ),
+      },
+      {
+        title: "Действия",
+        key: "actions",
+        align: "center",
+        width: 110,
+        render: (_: unknown, record) => (
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            onClick={() => navigate(`/quality/${record.id}`)}
+            style={{ paddingInline: 4 }}
+          >
+            Открыть
+          </Button>
+        ),
+      },
+    ],
+    [getScoreColor, navigate, token.colorPrimary]
+  );
 
   if (isLoading) {
     return (
@@ -88,17 +254,9 @@ const UserProfile: FC = () => {
           <UserProfileHeader
             user={user}
             userId={userId}
-            onDeactivate={async () => {
-              if (!userId) return;
-              try {
-                await deactivateUser(userId).unwrap();
-                message.success("Пользователь успешно деактивирован");
-                navigate("/users");
-              } catch {
-                message.error("Ошибка при деактивации пользователя");
-              }
-            }}
-            isDeactivating={isDeactivating}
+            onChangeStatus={handleChangeStatus}
+            isChangingStatus={isDeactivating || isActivating}
+            isDeactivated={!!isDeactivated}
           />
         </Col>
       </Row>
@@ -107,6 +265,37 @@ const UserProfile: FC = () => {
         <Col xs={24} lg={16}>
           <Space direction="vertical" size={16} style={{ width: "100%" }}>
             <UserProfileInfo user={user} />
+
+            <Card
+              size="small"
+              title={
+                <Space align="center">
+                  <FileTextOutlined style={{ color: token.colorPrimary }} />
+                  <span>Карты качества</span>
+                </Space>
+              }
+              bodyStyle={{ padding: 0 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <Table<IQualityMapListItem>
+                columns={qualityColumns}
+                dataSource={qualityMaps}
+                rowKey="id"
+                size="small"
+                loading={isQualityMapsLoading}
+                pagination={{
+                  current: mapsPage.page,
+                  pageSize: mapsPage.per_page,
+                  total: qualityMeta?.total,
+                  pageSizeOptions: [3, 5, 10],
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  onChange: (page, pageSize) => setMapsPage({ page, per_page: pageSize || 10 }),
+                  showTotal: (total, range) => `Показано ${range[0]}-${range[1]} из ${total}`,
+                }}
+                scroll={{ x: 800 }}
+              />
+            </Card>
 
             {/* Комментарии под основной информацией */}
             <Card
@@ -181,14 +370,65 @@ const UserProfile: FC = () => {
               }
             >
               <Space direction="vertical" size={12} style={{ width: "100%" }}>
-                <Flex align="center" gap={8} style={{ color: token.colorTextTertiary, fontSize: 12 }}>
-                  <FieldTimeOutlined />
-                  <Text type="secondary">Месяц: {currentMonthLabel}</Text>
+                <Flex align="center" gap={8} wrap>
+                  <FieldTimeOutlined style={{ color: token.colorTextTertiary }} />
+                  <Text type="secondary" style={{ fontSize: 12 }}>Текущий месяц</Text>
+                  <Tag color="blue" style={{ margin: 0 }}>{currentMonthLabel}</Tag>
                 </Flex>
+
                 <Flex gap={12} wrap>
-                  <Statistic title="Смен" value={schedule?.current_month_shifts ?? 0} suffix="шт" />
-                  <Statistic title="Часы за месяц" value={schedule?.current_month_hours ?? 0} suffix="ч" />
-                  <Statistic title="Часы всего" value={schedule?.total_hours ?? 0} suffix="ч" />
+                  <Card
+                    size="small"
+                    bordered
+                    style={{ flex: '1 1 140px', minWidth: 140, background: token.colorFillSecondary }}
+                    bodyStyle={{ padding: 12, textAlign: 'center' }}
+                  >
+                    <Statistic
+                      title="Смен в месяц"
+                      value={schedule?.current_month_shifts ?? 0}
+                      suffix="шт"
+                      valueStyle={{ color: token.colorText }}
+                    />
+                  </Card>
+                  <Card
+                    size="small"
+                    bordered
+                    style={{ flex: '1 1 160px', minWidth: 160, background: token.colorFillSecondary }}
+                    bodyStyle={{ padding: 12, textAlign: 'center' }}
+                  >
+                    <Statistic
+                      title="Часы за месяц"
+                      value={schedule?.current_month_hours ?? 0}
+                      suffix="ч"
+                      valueStyle={{ color: token.colorPrimary }}
+                    />
+                  </Card>
+                  <Card
+                    size="small"
+                    bordered
+                    style={{ flex: '1 1 160px', minWidth: 160, background: token.colorFillSecondary }}
+                    bodyStyle={{ padding: 12, textAlign: 'center' }}
+                  >
+                    <Statistic
+                      title="Часы всего"
+                      value={schedule?.total_hours ?? 0}
+                      suffix="ч"
+                      valueStyle={{ color: token.colorText }}
+                    />
+                  </Card>
+                  <Card
+                    size="small"
+                    bordered
+                    style={{ flex: '1 1 160px', minWidth: 160, background: token.colorFillSecondary }}
+                    bodyStyle={{ padding: 12, textAlign: 'center' }}
+                  >
+                    <Statistic
+                      title="Смен всего"
+                      value={schedule?.total_shifts ?? 0}
+                      suffix="шт"
+                      valueStyle={{ color: token.colorText }}
+                    />
+                  </Card>
                 </Flex>
               </Space>
             </Card>
@@ -208,8 +448,32 @@ const UserProfile: FC = () => {
               }
             >
               <Flex gap={12} wrap>
-                <Statistic title="Штрафы (шт)" value={penalties?.count ?? 0} suffix="шт" />
-                <Statistic title="Штрафы (часы)" value={penalties?.hours ?? 0} suffix="ч" />
+                <Card
+                  size="small"
+                  bordered
+                  style={{ flex: '1 1 160px', minWidth: 150, background: token.colorFillSecondary }}
+                  bodyStyle={{ padding: 12, textAlign: 'center' }}
+                >
+                  <Statistic
+                    title="Штрафы (шт)"
+                    value={penalties?.count ?? 0}
+                    suffix="шт"
+                    valueStyle={{ color: token.colorText }}
+                  />
+                </Card>
+                <Card
+                  size="small"
+                  bordered
+                  style={{ flex: '1 1 180px', minWidth: 160, background: token.colorFillSecondary }}
+                  bodyStyle={{ padding: 12, textAlign: 'center' }}
+                >
+                  <Statistic
+                    title="Штрафы (часы)"
+                    value={penalties?.hours ?? 0}
+                    suffix="ч"
+                    valueStyle={{ color: token.colorError }}
+                  />
+                </Card>
               </Flex>
               <div style={{ marginTop: 12 }}>
                 {penaltiesList.length > 0 ? (
@@ -273,52 +537,6 @@ const UserProfile: FC = () => {
                 </div>
               ) : (
                 <Empty description="Нет данных по снятиям" />
-              )}
-            </Card>
-
-            <Card
-              size="small"
-              title={
-                <span>
-                  <FileTextOutlined style={{ marginRight: 8, color: token.colorPrimary }} />
-                  Карты качества
-                </span>
-              }
-              extra={
-                <Button type="link" size="small" onClick={() => navigate(`/quality?user_id=${userId || ""}`)}>
-                  Открыть все
-                </Button>
-              }
-            >
-              {qualityMaps.length > 0 ? (
-                <Space direction="vertical" size={12} style={{ width: "100%" }}>
-                  {qualityMaps.map((map) => (
-                    <Card key={map.id} size="small" style={{ borderColor: token.colorBorderSecondary }}>
-                      <Flex justify="space-between" align="center">
-                        <div>
-                          <Text strong>Период</Text>
-                          <div style={{ fontSize: 12, color: token.colorTextSecondary }}>
-                            {map.period?.start || "—"} — {map.period?.end || "—"}
-                          </div>
-                        </div>
-                        <Tag color={map.status === "completed" ? "success" : "processing"} style={{ margin: 0 }}>
-                          {map.status === "completed" ? "Завершена" : "Активна"}
-                        </Tag>
-                      </Flex>
-                      <Flex justify="space-between" align="center" style={{ marginTop: 8 }}>
-                        <Text type="secondary" style={{ fontSize: 12 }}>Средний балл</Text>
-                        <Tag color={map.score >= 90 ? "green" : map.score >= 70 ? "orange" : "red"} style={{ margin: 0 }}>
-                          {map.score}%
-                        </Tag>
-                      </Flex>
-                      <div style={{ marginTop: 8 }}>
-                        <Link to={`/quality/${map.id}`}>Открыть карту</Link>
-                      </div>
-                    </Card>
-                  ))}
-                </Space>
-              ) : (
-                <Empty description="Нет карт качества" />
               )}
             </Card>
           </Space>

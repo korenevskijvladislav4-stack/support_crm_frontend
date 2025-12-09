@@ -56,6 +56,8 @@ export interface IUser {
   group: string | null;
   group_id: number | null;
   schedule_type: string | null;
+  status?: 'active' | 'deactivated';
+  created_at?: string;
 }
 
 /**
@@ -167,6 +169,8 @@ export interface IUserProfileFull {
   full_name?: string;
   email?: string;
   phone?: string;
+  status?: 'active' | 'deactivated';
+  created_at?: string;
   team?: {
     id: number;
     name: string;
@@ -183,6 +187,7 @@ export interface IUserProfileFull {
     current_month_hours: number;
     total_hours: number;
     current_month_shifts: number;
+    total_shifts: number;
   };
   penalties: {
     count: number;
